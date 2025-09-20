@@ -1,0 +1,8 @@
+{
+    "targetUser": "ktg5_",
+    "webPort": 6967,
+    "poll": {
+        "timeout": 4,
+        "time": 1
+    }
+}

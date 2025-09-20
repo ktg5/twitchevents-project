@@ -1,0 +1,130 @@
+@font-face {
+    src: url(/@sets/fonts/Montserrat-VariableFont_wght.woff2) format("woff2");
+    font-family: "Montserrat";
+    font-weight: 100 900;
+    font-style: normal;
+}
+
+
+* {
+    transition: opacity var(--fadeIn-animation);
+}
+
+[hide] {
+    opacity: 0;
+}
+
+body {
+    font-family: "Montserrat";
+    font-variation-settings: "wght" 500;
+    margin: 0 !important;
+}
+
+
+#effect-notify-container {
+    position: absolute;
+    width: 100vw;
+    height: 100vh;
+}
+
+
+#poll-container {
+    position: absolute;
+    width: 100vw;
+    height: 100vh;
+}
+
+#poll-container #poll {
+    position: absolute;
+    right: 0;
+    background: rgb(0 0 0 / 50%);
+    color: white;
+    margin: 1%;
+    border: .25vw solid #313131;
+    border-radius: .7vw;
+    padding: .5vw;
+    width: 17.5%;
+}
+
+#poll-container #poll .title {
+    font-variation-settings: "wght" 700;
+    text-shadow: 2px 2px 6px black;
+    font-size: 1.35vw;
+}
+
+#poll-container #poll .events {
+    margin: .5vw;
+}
+
+#poll-container #poll .events .event {
+    position: relative;
+    display: flex;
+    height: 2vw;
+    text-shadow: 2px 2px 6px black;
+    flex-wrap: wrap;
+    align-content: center;
+    background: rgb(0 0 0 / 50%);
+    margin: .5vw 0;
+    border: .25vw solid black;
+    border-radius: .5vw;
+    overflow: hidden;
+    transition: 
+        height var(--fadeIn-animation),
+        border-width var(--fadeIn-animation),
+        margin var(--fadeIn-animation),
+
+        border-color 50ms,
+
+        background var(--fadeIn-animation);
+}
+
+#poll-container #poll .events .event[disable] {
+    height: 0px;
+    border-width: 0px;
+    margin: 0 !important;
+}
+
+#poll-container #poll .events .event[possible] {
+    border-color: rgb(20, 125, 255);
+}
+
+#poll-container #poll .events .event[selected] {
+    background: gold;
+}
+
+#poll-container #poll .events .event .percent-bar {
+    position: absolute;
+    background: linear-gradient(90deg, #19b7ff, #165ac5);
+    height: 100%;
+    transition: all var(--fadeIn-animation);
+}
+
+#poll-container #poll .events .event[selected].percent-bar {
+    background: gold;
+}
+
+#poll-container #poll .events .event .number {
+    font-size: 1.25vw;
+    font-variation-settings: "wght" 700;
+    margin-left: .5vw;
+    z-index: 1;
+}
+
+#poll-container #poll .events .event .title {
+    font-size: 1vw;
+    font-variation-settings: "wght" 500;
+    padding: .15vw;
+    padding-left: 1.25vw;
+    z-index: 1;
+}
+
+#poll-container #poll .events .event .data {
+    position: absolute;
+    font-size: .85vw;
+    top: 0;
+    bottom: 0;
+    right: .5vw;
+    margin: auto;
+    height: fit-content;
+    z-index: 1;
+}

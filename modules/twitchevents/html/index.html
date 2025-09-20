@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>TwitchEvents Alertbox</title>
+
+        <link rel="stylesheet" href="/@sets/main.css">
+
+        <script src="/modules/socket.io/client-dist/socket.io.js"></script>
+        <script type="module" src="/modules/howler/dist/howler.min.js"></script>
+        <script type="module" src="/modules/load-html/index.js"></script>
+
+        <script src="/@sets/main.js"></script>
+
+
+        <style>
+            :root {
+                --fadeIn-animation: 250ms;
+            }
+        </style>
+    </head>
+
+
+    <body>
+        <div id="notify-container"></div>
+        <div id="poll-container">
+            <div id="poll" hide>
+                <div class="title">Vote using the number next to the event title!</div>
+                <div class="events"></div>
+            </div>
+        </div>
+
+
+        <script>
+
+            var poll = document.querySelector('#poll');
+            var pollEvents = poll.querySelector('.events');
+            const animationTime = Number(window.getComputedStyle(document.body).getPropertyValue('--fadeIn-animation').split('ms')[0]);
+
+
+            var sfxs = {};
+            const pollRandomsLength = 8;
+            let currentRandom = 1;
+            function playSfx(type) {
+                // Random pick
+                if (type == "poll-random") {
+                    if (currentRandom > pollRandomsLength) currentRandom = 1;
+                    const calc = pollRandomsLength - currentRandom;
+                    sfxs[type][calc].play();
+                    currentRandom++;
+                    return;
+                }
+                // Default
+                if (sfxs[type]) sfxs[type].play();
+                else console.error(`couldn't find the sfx type under "${type}"`);
+            }
+
+
+            var client;
+            const socket = io();
+            socket.on('connect', () => {
+                sfxs = {
+                    "poll-new": new Howl({
+                        src: ['/@sets/misc/poll-new.wav'],
+                        volume: 1,
+                        preload: true
+                    }),
+                    "poll-update": new Howl({
+                        src: ['/@sets/misc/poll-update.wav'],
+                        volume: .75,
+                        preload: true
+                    }),
+                    "poll-selected": new Howl({
+                        src: ['/@sets/misc/poll-selected.wav'],
+                        volume: .75,
+                        preload: true
+                    }),
+                    "poll-random": []
+                };
+                for (let i = 0; i < pollRandomsLength; i++) {
+                    sfxs['poll-random'][i] = new Howl({
+                        src: [`/@sets/misc/poll-random_pick${i + 1}.wav`],
+                        volume: .75,
+                        preload: true
+                    });
+                }
+
+
+                console.log('Connected to TwitchEvents IO service. Session ID:', socket.id);
+                // Get client information -- aka stuff for first init
+                socket.emit('get-client');
+
+
+                // When the server sends us back our first init data
+                socket.on('got-client', (data) => {
+                    client = data;
+
+
+                    // Update poll information for client
+                    function drawPoll(d) {
+                        // Unhide poll
+                        poll.removeAttribute('hide');
+
+                        // Sound effects for init/update
+                        if (d.newPoll == true) playSfx('poll-new');
+                        else playSfx('poll-update');
+
+                        // Get all events (if any)
+                        const allEvents = pollEvents.querySelectorAll(`.event`);
+                        // Add each option within the data we're given onto the poll html
+                        for (let i = 0; i < d.options.length; i++) {
+                            const element = d.options[i];
+                            const votePercent = d.totalVotes > 0 ? ((element.votes / d.totalVotes) * 100) : 0;
+                            if (allEvents[i]) {
+                                allEvents[i].setAttribute('event-name', element.data.name);
+                                allEvents[i].querySelector(`.percent-bar`).style.width = `${votePercent}%`;
+                                allEvents[i].querySelector(`.number`).innerHTML = i + 1;
+                                allEvents[i].querySelector(`.title`).innerHTML = element.data.desc;
+                                allEvents[i].querySelector(`.data`).innerHTML = element.votes;
+                            } else pollEvents.insertAdjacentHTML('beforeend', `
+                            <div class="event" event-name="${element.data.name}">
+                                <div class="percent-bar" style="width: ${votePercent}%"></div>
+                                <div class="number">${i + 1}</div>
+                                <div class="title">${element.data.desc}</div>
+                                <div class="data">${element.votes}</div>
+                            </div>
+                            `);
+                        }
+                    }
+
+
+                    // Picking animation & sfx moment
+                    var pickingInt = null;
+                    function pickingPoll(d) {
+                        // Get events that tied with in the html poll
+                        let tiedEventDivs = [];
+                        d.winningOption.forEach(element => {
+                            const foundDiv = pollEvents.querySelector(`[event-name="${element.data.name}"]`);
+                            if (foundDiv) tiedEventDivs.push(foundDiv);
+                        });
+
+                        let i = 0;
+                        pickingInt = setInterval(() => {
+                            // Sfx
+                            playSfx('poll-random');
+
+                            // HTML/CSS animation
+                            if (i > tiedEventDivs.length - 1) i = 0;
+                            const possibleDiv = pollEvents.querySelector('[possible]');
+                            if (possibleDiv) pollEvents.querySelector('[possible]').removeAttribute('possible');
+                            tiedEventDivs[i].setAttribute('possible', null);
+                            i = i + 1;
+                        }, 200);
+                    }
+
+
+                    // Show end result on poll
+                    function endPoll(d) {
+                        // If we were picking a multi choice
+                        if (pickingInt !== null) {
+                            clearInterval(pickingInt);
+                            pickingInt = null;
+
+                            // Await for twitchevents client to actually enable event
+                            setTimeout(showRes(), 500);
+                        } else showRes();
+
+
+                        // Highlight the result of the poll within the list of events in the html poll
+                        function showRes() {
+                            console.log(d);
+                            // Disable all expect for result
+                            for (let i = 0; i < pollEvents.children.length; i++) {
+                                const element = pollEvents.children[i];
+                                // Disable this option
+                                if (element.getAttribute('event-name') !== d.winningOption.data.name) element.setAttribute('disable', null);
+                                else element.setAttribute('selected', null);
+                            }
+
+                            // Play sfx
+                            playSfx('poll-selected');
+
+                            // Clear poll after a few
+                            setTimeout(() => { clearPoll(); }, 2000);
+                        }
+                    }
+
+                    // Clear client poll
+                    function clearPoll() {
+                        poll.setAttribute('hide', '');
+                        setTimeout(() => {
+                            pollEvents.innerHTML = '';
+                        }, animationTime);
+                    }
+
+
+                    // Draw poll if there's a current poll happenin'
+                    if (client.poll.current.voting == true) drawPoll(client.poll.current);
+
+
+                    // Make listeners
+                    /// Poll new & poll update return the same data & like to be used like the same. Similar to how Twitch uses some of their similar socket calls
+                    socket.on(`${client.user}@poll-new`, (d) => { drawPoll({...d, newPoll: true}) });
+                    socket.on(`${client.user}@poll-update`, (d) => { drawPoll({...d, newPoll: false}) });
+
+                    /// Picking a multi-choice
+                    socket.on(`${client.user}@poll-picking`, (d) => { pickingPoll(d) });
+
+                    /// Poll end
+                    socket.on(`${client.user}@poll-end`, (d) => { endPoll(d) });
+                });
+            });
+
+            socket.on("disconnect", (reason) => {
+                location.reload();
+            });
+
+        </script>
+    </body>
+</html>
