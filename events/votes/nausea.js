@@ -26,7 +26,6 @@ module.exports = {
         }, 10);
     },
 
-
     async disable(event) {
         clearInterval(effectInterval);
     }

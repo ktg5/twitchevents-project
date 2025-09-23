@@ -22,9 +22,13 @@ class InputListener extends EventTarget {
     #lastSyntheticEvent = null;
     lastMousePos = { x: 0, y: 0 };
     /**
-     * @type {nut.Key}
+     * @enum
      */
     Keys = nut.Key;
+    /**
+     * @enum
+     */
+    MouseBtn = nut.Button;
 
 
     constructor() {
@@ -37,10 +41,11 @@ class InputListener extends EventTarget {
                     let splitData = e[0].split(',');
                     let pos = { x: Number(splitData[0]), y: Number(splitData[1]) };
 
-                    e[0] = null;
+                    delete e[0];
                     e.x = pos.x;
                     e.y = pos.y;
 
+                    this.lastMousePos = { ...e };
                     this.#handleEvent("mouseMoved", e);
                 break;
 
@@ -90,32 +95,11 @@ class InputListener extends EventTarget {
 
 
     /**
-     * Set the mouse position to a specific x & y position
-     * Will send a emit to "mouseMoved"
-     * @param {Number} x 
-     * @param {Number} y
-     */
-    async setMouse(x, y) {
-        const thisEventName = "mouseMoved";
-
-        const deltaX = x - this.lastMousePos.x;
-        const deltaY = y - this.lastMousePos.y;
-        const returnData = { x, y, deltaX, deltaY, synthetic: true };
-
-        this.#lastSyntheticEvent = { type: thisEventName, returnData, time: Date.now() };
-        await nut.mouse.setPosition(new nut.Point( x, y ));
-        this.lastMousePos = { x, y };
-
-        this.#emit(thisEventName, returnData);
-    }
-
-    /**
-     * Move the mouse position to a specific x & y position
+     * Set the mouse position to a specific position via the `point` arg
      * Will send a emit to "mouseMoved"
      * @param {Point} point
-     * @param {boolean} [relative] If the mouse movement should be relative
      */
-    async moveMouse(point, relative = false) {
+    async setMouse(point) {
         const thisEventName = "mouseMoved";
 
         const deltaX = point.x - this.lastMousePos.x;
@@ -123,45 +107,110 @@ class InputListener extends EventTarget {
         const returnData = { x: point.x, y: point.y, deltaX, deltaY, synthetic: true };
 
         this.#lastSyntheticEvent = { type: thisEventName, returnData, time: Date.now() };
-        await nut.mouse.move(point, relative);
+        await nut.mouse.move(point);
         this.lastMousePos = { x: point.x, y: point.y };
+
+        this.#emit(thisEventName, returnData);
+    }
+
+    /**
+     * Moves the mouse by the amount defined in the `point` arg
+     * @param {Point} point A basic point, which contains X & Y values
+     */
+    async moveMouse(point) {
+        const thisEventName = "mouseMoved";
+
+        const mousePos = await this.getMousePos();
+        const deltaX = point.x - this.lastMousePos.x;
+        const deltaY = point.y - this.lastMousePos.y;
+        const fullX = mousePos.x + point.x;
+        const fullY = mousePos.y + point.y;
+        const returnData = { x: fullX, y: fullY, deltaX, deltaY, synthetic: true };
+
+        this.#lastSyntheticEvent = { type: thisEventName, returnData, time: Date.now() };
+        await nut.mouse.move(point, true);
+        this.lastMousePos = { x: fullX, y: fullY };
         
         this.#emit(thisEventName, returnData);
     }
 
     /**
      * Get the current mouse position
-     * @returns {Promise<{ x: number, y: number } | nut.Point>}
+     * @returns {Promise<Point>}
      */
     async getMousePos() {
-        return new Promise((resolve, reject) => { resolve(nut.mouse.getPosition()); });
+        return new Promise(async (resolve, reject) => {
+            const nutPos = await nut.mouse.getPosition();
+            resolve(new Point(nutPos.x, nutPos.y)); 
+        });
     }
 
-    /**
-     * Left click or click a given nut.js mouse button
-     * Will send a emit to "mouseClicked"
-     * @param {string} [button] Can be either "left" or "right"
-     */
-    async click(button = nut.left) {
-        const thisEventName = "mouseClicked";
 
+    #handleMouseButton(button) {
         let targetClick;
         switch (button) {
-            case "left":
-                targetClick = nut.left;
+            case 0:
+                targetClick = this.MouseBtn.LEFT;
             break;
 
-            case "right":
-                targetClick = nut.right;
+            case 1:
+                targetClick = this.MouseBtn.RIGHT;
+            break;
+
+            case 2:
+                targetClick = this.MouseBtn.MIDDLE;
             break;
         
             default:
-                targetClick = nut.left;
+                targetClick = this.MouseBtn.LEFT;
             break;
         }
 
+        return targetClick;
+    }
+
+    /**
+     * Click a given `MouseBtn` enum
+     * Will send a emit to "mouseClicked"
+     * @param {MouseBtn} [button] Can be either `0` for left, `1` for right or `2` for middle
+     */
+    async clickMouse(button = this.MouseBtn.LEFT) {
+        const thisEventName = "mouseClicked";
+
+        let targetClick = this.#handleMouseButton(button);
+
         this.#lastSyntheticEvent = { type: thisEventName, targetClick, time: Date.now() };
         await nut.mouse.click(targetClick);
+        this.#emit(thisEventName, { targetClick, synthetic: true });
+    }
+
+    /**
+     * Hold a given `MouseBtn` enum
+     * Will send a emit to "mouseClicked"
+     * @param {MouseBtn} [button] Can be either `0` for left, `1` for right or `2` for middle
+     */
+    async holdMouse(button = this.MouseBtn.LEFT) {
+        const thisEventName = "mousePressed";
+
+        let targetClick = this.#handleMouseButton(button);
+
+        this.#lastSyntheticEvent = { type: thisEventName, targetClick, time: Date.now() };
+        await nut.mouse.pressButton(targetClick);
+        this.#emit(thisEventName, { targetClick, synthetic: true });
+    }
+
+    /**
+     * Release a given `MouseBtn` enum
+     * Will send a emit to "mouseReleased"
+     * @param {MouseBtn} [button] Can be either `0` for left, `1` for right or `2` for middle 
+     */
+    async releaseMouse(button = this.MouseBtn.LEFT) {
+        const thisEventName = "mouseReleased";
+
+        let targetClick = this.#handleMouseButton(button);
+
+        this.#lastSyntheticEvent = { type: thisEventName, targetClick, time: Date.now() };
+        await nut.mouse.releaseButton(targetClick);
         this.#emit(thisEventName, { targetClick, synthetic: true });
     }
 
@@ -169,7 +218,7 @@ class InputListener extends EventTarget {
     /**
      * Type a key
      * Will send a emit to all events relating to keys
-     * @param {Key} key The key to press
+     * @param {Keys} key The key to press
      */
     async typeKey(key) {
         const thisEventName = "keyTyped";

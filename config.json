@@ -1,8 +1,9 @@
 {
-    "targetUser": "ktg5_",
+    "user": "ktg5_special",
     "webPort": 6967,
     "poll": {
-        "timeout": 4,
-        "time": 1
+        "startOnInit": false,
+        "timeout": 0,
+        "time": 3
     }
 }

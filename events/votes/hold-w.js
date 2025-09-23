@@ -1,27 +1,6 @@
 const TwitchEvents = require(`../../modules/twitchevents`);
 
 
-function pressedFunc(d) {
-    // console.log('p: ', d);
-    if (d.synthetic) return;
-    if (
-        d[0] == 'A'
-        || d[0] == 'D'
-        || d[0] == 'S'
-    ) {
-        TwitchEvents.inputs.releaseKey(TwitchEvents.inputs.Keys.A);
-        TwitchEvents.inputs.releaseKey(TwitchEvents.inputs.Keys.D);
-        TwitchEvents.inputs.releaseKey(TwitchEvents.inputs.Keys.S);
-    }
-}
-
-function releaseFunc(d) {
-    // console.log('r: ', d);
-    if (d.synthetic) return;
-    if (d[0] == 'W') TwitchEvents.inputs.holdKey(TwitchEvents.inputs.Keys.W);
-}
-
-
 module.exports = {
     data: {
         name: "hold-w",
@@ -30,16 +9,37 @@ module.exports = {
     },
 
 
-    async enable(event) {
-        TwitchEvents.inputs.holdKey(TwitchEvents.inputs.Keys.W);
-        TwitchEvents.inputs.on('keyPressed', pressedFunc);
-        TwitchEvents.inputs.on('keyReleased', releaseFunc);
+    func: {
+        pressedFunc(d) {
+            // console.log('p: ', d);
+            if (d.synthetic) return;
+            if (
+                d[0] == 'A'
+                || d[0] == 'D'
+                || d[0] == 'S'
+            ) {
+                TwitchEvents.inputs.releaseKey(TwitchEvents.inputs.Keys.A);
+                TwitchEvents.inputs.releaseKey(TwitchEvents.inputs.Keys.D);
+                TwitchEvents.inputs.releaseKey(TwitchEvents.inputs.Keys.S);
+            }
+        },
+        releaseFunc(d) {
+            // console.log('r: ', d);
+            if (d.synthetic) return;
+            if (d[0] == 'W') TwitchEvents.inputs.holdKey(TwitchEvents.inputs.Keys.W);
+        }
     },
 
 
-    async disable(event) {
+    async enable(client) {
+        TwitchEvents.inputs.holdKey(TwitchEvents.inputs.Keys.W);
+        TwitchEvents.inputs.on('keyPressed', this.func.pressedFunc);
+        TwitchEvents.inputs.on('keyReleased', this.func.releaseFunc);
+    },
+
+    async disable(client) {
         TwitchEvents.inputs.releaseKey(TwitchEvents.inputs.Keys.W);
-        TwitchEvents.inputs.off('keyPressed', pressedFunc);
-        TwitchEvents.inputs.off('keyReleased', releaseFunc);
+        TwitchEvents.inputs.off('keyPressed', this.func.pressedFunc);
+        TwitchEvents.inputs.off('keyReleased', this.func.releaseFunc);
     }
 }

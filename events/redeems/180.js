@@ -9,7 +9,7 @@ module.exports = {
     },
 
 
-    async enable(event) {
+    async enable(client) {
         // Set new muose position
         setTimeout(async () => {
             await TwitchEvents.inputs.moveMouse( new TwitchEvents.Point( 3500, 0 ), true );

@@ -23,33 +23,68 @@ if (process.stdin.isTTY) process.stdin.setRawMode(true);
 
 
 /**
+ * @typedef {{
+ *      startOnInit: boolean,
+ *      timeout: number,
+ *      time: number,
+ *      current: {
+ *          voting: boolean,
+ *          time: number,
+ *          options: VoteEvent[]
+ *          voters: Voter[],
+ *          totalVotes: number,
+ *          displayType: string,
+ *          winningOption: VoteEvent | VoteEvent[] | null
+ *      },
+ *      sets: {
+ *          interval: interval
+ *          endTimeout: timeout
+ *      }
+ *  }} PollData
+ */
+
+/**
  * @typedef {Object} EventData
- * @property {string} name - The name of the event
- * @property {string} [desc] - (Optional) The event desciription to be displayed on a vote (Only for VOTES events)
- * @property {string} type - The type of the event (Defined in the "Types" enum/class)
- * @property {string} [reward] - (Optional) The reward name that's linked with a Twitch channel reward
+ * @prop {string} name - The name of the event
+ * @prop {string} [desc] - (Optional) The event desciription to be displayed on a vote (Only for VOTES events)
+ * @prop {string} type - The type of the event (Defined in the "Types" enum/class)
+ * @prop {string} [reward] - (Optional) The reward name that's linked with a Twitch channel reward
+ */
+
+/**
+ * @callback EnableEvent
+ * @param {Client} client - TwitchEvents client
+ * @param {boolean} forced - If set to `true`, the event will not auto disable
+ * @returns {void}
+ */
+
+/**
+ * @callback DisableEvent
+ * @param {Client} client - TwitchEvents client
+ * @returns {void}
  */
 
 /**
  * @typedef {Object} Event
- * @property {EventData} data - Event data
- * @property {Function} [disable] - Disable event
- * @property {Function} enable - Enable or run event function
- * @property {Number} [lastsFor] - The amount of seconds the event lasts for
+ * @prop {EventData} data - Event data
+ * @prop {number} [time] - The amount of time for the event to last
+ * @prop {DisableEvent} [disable] - Disable event
+ * @prop {EnableEvent} enable - Enable or run event function
  */
 
 /**
  * @typedef {Object} VoteEvent
- * @property {EventData} data - Event data
- * @property {Function} disable - Disable event
- * @property {Function} enable - Enable or run event function
+ * @prop {EventData} data - Event data
+ * @prop {number} time - The amount of time for the event to last
+ * @prop {DisableEvent} disable - Disable event
+ * @prop {EnableEvent} enable - Enable or run event function
  * @prop {Number} [votes] - Is only defined when in a poll. Will return a number of how many votes this event has got during a poll
  */
 
 /**
  * @typedef {Object} Voter
- * @property {string} name - Username on twitch
- * @property {number} votedFor - The number that the user voted for
+ * @prop {string} name - Username on twitch
+ * @prop {number} votedFor - The number that the user voted for
  */
 
 
@@ -104,27 +139,25 @@ class Client {
     /**
      * @type {tmi.Client}
      */
-    #tmiClient;
+    irc;
     #gqlUser;
+    /**
+     * @type {socketIo.Server}
+     */
+    #io;
 
 
     /**
-     * 
+     * Makes a new TwitchEvents instance
      * @param {{
-     *      res: {
-     *          w: number,
-     *          h: number
-     *      } 
-     * }} data 
+     *      port: number
+     * }} data
      */
     constructor(data) {
         this.createdTime = new Date();
-        
 
-        this.res = {
-            w: data.res.w,
-            h: data.res.h
-        }
+
+        this.initEventWeb(data.port);
 
 
         // CLI
@@ -149,7 +182,7 @@ class Client {
                     logger.info(`TwitchEvents CLI: Found event! Event data: `);
                     console.log(foundEvent);
                     logger.info(`TwitchEvents CLI: Enabling found event...`);
-                    foundEvent.enable();
+                    foundEvent.enable(this, true);
                 break;
 
                 case 'disable':
@@ -162,7 +195,7 @@ class Client {
                     logger.info(`TwitchEvents CLI: Found event! Event data: `);
                     console.log(foundEvent);
                     logger.info(`TwitchEvents CLI: Disabling found event...`);
-                    foundEvent.disable();
+                    foundEvent.disable(this);
                 break;
 
                 case 'end':
@@ -184,7 +217,7 @@ class Client {
                     switch (args[1]) {
                         case 'poll':
                             logger.info(`TwitchEvents CLI: Got test request for poll!`);
-                            this.#pollFunc(this);
+                            this.#pollStart(this);
                         break;
 
                         default:
@@ -219,11 +252,24 @@ class Client {
         // And return the stuff we and the dumbass coder to use
         this.web = {
             port: port,
-            io: webData.io
+            /**
+             * Sends data to TwitchEvents web clients via socket.io
+             * @param {string} channel 
+             * @param {*} data 
+             */
+            sendEmit: (channel, data) => {
+                if (
+                    !channel
+                    || !data
+                ) throw new Error('TwitchEvents: "channel" or "data" need to be defined.');
+                // Send emit over io
+                this.#io.emit(`${this.user}@${channel}`, data);
+            }
         };
+        this.#io = webData.io;
 
         // Send client info on IO request
-        this.web.io.on('connection', (socket) => {
+        this.#io.on('connection', (socket) => {
             socket.on('get-client', e => {
                 let tempInt = setInterval(() => {
                     if (addedEvents) {
@@ -252,6 +298,7 @@ class Client {
      * @param {{
      *      user: string,
      *      poll: {
+     *          startOnInit: boolean,
      *          timeout: number,
      *          time: number
      *      }
@@ -268,27 +315,13 @@ class Client {
         // Set data to this
         this.user = data.user;
         /**
-         * @type {{
-         *      current: {
-         *          voting: boolean,
-         *          time: number,
-         *          options: VoteEvent[]
-         *          voters: Voter[],
-         *          totalVotes: number,
-         *          displayType: string,
-         *          winningOption: VoteEvent | VoteEvent[] | null
-         *      },
-         *      sets: {
-         *          interval: interval
-         *          endTimeout: timeout
-         *      }
-         *  }}
+         * @type {PollData}
          */
         this.poll = this.#defaultPollData(data);
 
 
         // First, let's a get a Hermes instance running
-        this.#gqlUser = await gqlInstance.getChannel(data.user);
+        this.#gqlUser = await gqlInstance.getChannel(this.user);
         let hermesCheck = false;
         this.hermes = new Hermes(Number(this.#gqlUser.id), 'all');
         // Reward redeem event listener
@@ -296,25 +329,28 @@ class Client {
             if (d.type == "reward-redeemed") {
                 const foundEvent = this.events.redeems.find((r) => r.data.reward === d.data.redemption.reward.title);
                 // Enable the event
-                if (foundEvent) foundEvent.enable();
+                if (foundEvent) foundEvent.enable(this);
             }
         });
 
 
         // Make tmi.js client
-        this.#tmiClient = new tmi.Client({
-            channels: [ data.user ]
+        this.irc = new tmi.Client({
+            channels: [ this.user ]
         });
-        this.#tmiClient.connect();
+        this.irc.connect();
 
 
         // ###########
         // ########### Generate polls
         // ###########
         // DEBUG:
-        // setTimeout(e => { this.#pollFunc(); }, 1000);
+        // setTimeout(e => { this.#pollStart(); }, 1000);
         // DEFAULT:
         this.#togglePollInt();
+        setTimeout(() => {
+            if (this.poll.startOnInit == true) this.#pollStart();
+        }, 1000);
 
 
         // Set the events object
@@ -359,11 +395,15 @@ class Client {
             logger.info(`TwitchEvents: Cleared new poll interval`);
         } else {
             const timeCalc = minsToMs(this.poll.timeout) + minsToMs(this.poll.time);
-            this.poll.sets.interval = setInterval(() => { this.#pollFunc(); }, timeCalc);
+            this.poll.sets.interval = setInterval(async () => { await this.#pollStart(); }, timeCalc);
             logger.info(`TwitchEvents: Intervaling new polls every ${timeCalc / 60 / 1000} minute(s)...`);
         }
     }
 
+    /**
+     * @param {Client} data 
+     * @returns {PollData}
+     */
     #defaultPollData(data) {
         return {
             ...data.poll,
@@ -386,8 +426,11 @@ class Client {
     /**
      * Create a new poll on the current client for the user's twitch to vote on. This also uses some socketio stuff to talk with the event web.
      */
-    #pollFunc() {
-        if (this.poll.current.voting == true) return logger.error('TwitchEvents: There\'s already a poll happening! Who\'s calling this?!');
+    async #pollStart() {
+        if (this.poll.current.voting == true) {
+            logger.info('TwitchEvents: Ending current poll...');
+            await this.#pollEnd();
+        }
         // Select 4 events from this.events.votes
         /**
          * @type {VoteEvent[]}
@@ -438,49 +481,13 @@ class Client {
         this.poll.current.options = pollList;
         this.poll.current.totalVotes = 0;
         this.poll.current.displayType = "VOTES";
-        this.web.io.emit(`${this.user}@poll-new`, this.poll.current);
+        this.web.sendEmit(`poll-new`, this.poll.current);
         logger.info(`TwitchEvents: Started a new poll! Closes in ${this.poll.current.time} minute(s)!`);
 
 
         // Listen to chat messages
         logger.info(`TwitchEvents: Listening in ${this.user}'s chat for messages relating to poll...`);
-        this.#tmiClient.on('message', (channel, tags, message, self) => {
-            const sender = tags['username'];
-            const sentNumber = Number(message) - 1;
-
-            // Check if the sender is new to the current poll
-            const foundSender = this.poll.current.voters ? this.poll.current.voters.find((v) => v.name == sender) : null;
-            if (!foundSender) {
-                // Check to make sure the message they put in the chat is within the max length of the selected options
-                if (
-                    (sentNumber + 1) <= this.poll.current.options.length
-                    && (sentNumber + 1) > 0
-                ) {
-                    // Put them into the voters list & count their vote
-                    this.poll.current.voters.push({
-                        name: sender,
-                        votedFor: sentNumber
-                    });
-                    this.poll.current.options[sentNumber].votes++;
-                    this.poll.current.totalVotes++;
-                    sendUpdate(this);
-                }
-            // If the voter is voting for a different choice, let them change their vote
-            } else if (
-                foundSender.votedFor !== sentNumber
-                && (sentNumber + 1) > 0
-                && this.poll.current.options[sentNumber]
-            ) {
-                const pastVote = foundSender.votedFor;
-                foundSender.votedFor = sentNumber;
-                this.poll.current.options[pastVote].votes--;
-                this.poll.current.options[sentNumber].votes++;
-                sendUpdate(this);
-            }
-
-            // Send the data to the web viewer as well
-            function sendUpdate(client) { client.web.io.emit(`${client.user}@poll-update`, client.poll.current) };
-        });
+        this.irc.on('message', this.#onIrcMessage);
 
 
         // Wait the poll time provided & end everything
@@ -488,60 +495,116 @@ class Client {
     }
 
     /**
-     * End the currently running poll on this client
+     * 
+     * @param {string} channel 
+     * @param {tmi.ChatUserstate} tags 
+     * @param {string} message 
      */
-    #pollEnd() {
-        // Clear timeout
-        clearTimeout(this.poll.sets.endTimeout);
-        this.poll.sets.endTimeout = null;
+    #onIrcMessage(channel, tags, message) {
+        const sender = tags['username'];
+        const sentNumber = Number(message) - 1;
 
-        // Get event winner information
-        this.poll.current.options.forEach((option) => {
-            if (this.poll.current.winningOption == null) return this.poll.current.winningOption = option;
-            // Check an option in the (possibly) winning array to see if it's the same value or is higher
-            if (Array.isArray(this.poll.current.winningOption)) {
-                if (this.poll.current.winningOption[0].votes < option.votes) return this.poll.current.winningOption = option;
-                else if (this.poll.current.winningOption[0].votes == option.votes) return this.poll.current.winningOption.push(option);
-            // Normal stuff happens down here
-            } else {
-                if (this.poll.current.winningOption.votes < option.votes) return this.poll.current.winningOption = option;
-                else if (this.poll.current.winningOption.votes == option.votes) return this.poll.current.winningOption = [this.poll.current.winningOption, option];
+        // Check if the sender is new to the current poll
+        const foundSender = this.poll.current.voters ? this.poll.current.voters.find((v) => v.name == sender) : null;
+        if (!foundSender) {
+            // Check to make sure the message they put in the chat is within the max length of the selected options
+            if (
+                (sentNumber + 1) <= this.poll.current.options.length
+                && (sentNumber + 1) > 0
+            ) {
+                // Put them into the voters list & count their vote
+                this.poll.current.voters.push({
+                    name: sender,
+                    votedFor: sentNumber
+                });
+                this.poll.current.options[sentNumber].votes++;
+                this.poll.current.totalVotes++;
+                sendUpdate(this);
             }
-        });
-        
-        // Enabling the winning option...
-        if (Array.isArray(this.poll.current.winningOption)) {
-            // Pick a random one after sending a emit for the picking animation
-            this.web.io.emit(`${this.user}@poll-picking`, this.poll.current);
-            
-            setTimeout(() => {
-                this.poll.current.winningOption = this.poll.current.winningOption[Math.floor(Math.random() * this.poll.current.winningOption.length)];
-                // console.log('this client: ', this);
-                // console.log('current poll: ', this.poll.current);
-                // console.log('option: ', this.poll.current.winningOption);
-                end(this);
-            }, 3000);
-        } else end(this);
+        // If the voter is voting for a different choice, let them change their vote
+        } else if (
+            foundSender.votedFor !== sentNumber
+            && (sentNumber + 1) > 0
+            && this.poll.current.options[sentNumber]
+        ) {
+            const pastVote = foundSender.votedFor;
+            foundSender.votedFor = sentNumber;
+            this.poll.current.options[pastVote].votes--;
+            this.poll.current.options[sentNumber].votes++;
+            sendUpdate(this);
+        }
 
-        // End
+        // Send the data to the web viewer as well
         /**
          * @param {Client} client 
          */
-        function end(client) {
-            // Send emits
-            client.web.io.emit(`${client.user}@poll-end`, client.poll.current);
+        function sendUpdate(client) { client.web.sendEmit(`${client.user}@poll-update`, client.poll.current) };
+    }
 
-            // For coolness......... lmao
-            setTimeout(() => {
-                // Enable option
-                client.poll.current.winningOption.enable();
+    /**
+     * End the currently running poll on this client
+     * @returns {Promise<boolean>} - If the poll ending was a success
+     */
+    #pollEnd() {
+        return new Promise((resolve, reject) => {
+            // Set voting to false
+            this.poll.current.voting = false;
 
-                // Clear everythin'
-                const pastPoll = { ...client.poll.current };
-                client.poll = client.#defaultPollData(client);
-                client.poll.prev = { options: pastPoll.options, winningOption: pastPoll.winningOption };
-            }, 1000);
-        }
+            // Clear timeout
+            clearTimeout(this.poll.sets.endTimeout);
+            this.poll.sets.endTimeout = null;
+            // Stop watching chat
+            this.irc.removeListener('message', this.#onIrcMessage);
+
+            // Get event winner information
+            this.poll.current.options.forEach((option) => {
+                if (this.poll.current.winningOption == null) return this.poll.current.winningOption = option;
+                // Check an option in the (possibly) winning array to see if it's the same value or is higher
+                if (Array.isArray(this.poll.current.winningOption)) {
+                    if (this.poll.current.winningOption[0].votes < option.votes) return this.poll.current.winningOption = option;
+                    else if (this.poll.current.winningOption[0].votes == option.votes) return this.poll.current.winningOption.push(option);
+                // Normal stuff happens down here
+                } else {
+                    if (this.poll.current.winningOption.votes < option.votes) return this.poll.current.winningOption = option;
+                    else if (this.poll.current.winningOption.votes == option.votes) return this.poll.current.winningOption = [this.poll.current.winningOption, option];
+                }
+            });
+            
+            // Enabling the winning option...
+            if (Array.isArray(this.poll.current.winningOption)) {
+                // Pick a random one after sending a emit for the picking animation
+                logger.info('TwitchEvents: Picking one of the winning events...');
+                this.web.sendEmit(`${this.user}@poll-picking`, this.poll.current);
+                
+                setTimeout(() => {
+                    this.poll.current.winningOption = this.poll.current.winningOption[Math.floor(Math.random() * this.poll.current.winningOption.length)];
+                    end(this);
+                }, 3000);
+            } else end(this);
+
+            // End
+            /**
+             * @param {Client} client 
+             */
+            function end(client) {
+                // Send emits
+                client.web.sendEmit(`${client.user}@poll-end`, client.poll.current);
+
+                // For coolness......... lmao
+                setTimeout(() => {
+                    // Enable option
+                    if (!client.poll.current.winningOption.enable) console.log(client.poll.current.winningOption);
+                    client.poll.current.winningOption.enable(client);
+
+                    // Clear everythin'
+                    const pastPoll = { ...client.poll.current };
+                    client.poll = client.#defaultPollData(client);
+                    client.poll.prev = { options: pastPoll.options, winningOption: pastPoll.winningOption };
+
+                    logger.info('TwitchEvents: Current poll has ended!');
+                }, 1000);
+            }
+        });
     }
 
 
@@ -573,6 +636,14 @@ class Client {
 
             const eventFileList = fs.readdirSync(dir);
             eventFileList.forEach(eventName => {
+                // Check for file type
+                const eventExt = path.extname(eventName);
+                if (
+                    eventExt !== '.js'
+                    && eventExt !== '.ts'
+                ) return;
+
+                // Open event file
                 const eventPath = path.join(dir, eventName);
                 /**
                  * Event file.
@@ -583,51 +654,60 @@ class Client {
 
                 // Check if events have the default opinions
                 if (
-                    'data' in event
-                    && 'enable' in event
-                ) {
-                    // Check if the event has been put into one of the event array already
-                    if (
-                        this.events.votes.find(v => v.data.name === event.data.name)
-                        || this.events.redeems.find(v => v.data.name === event.data.name)
-                    ) throw new Error(`TwitchEvents: The event, "${eventName}", has the same name in it's "data" object--that being "${event.data.name}"--as a already existing event.`);
+                    !'data' in event
+                    && !'enable' in event
+                ) throw new Error(`TwitchEvents: The event, "${eventName}", doesn't meet the event script requirements.`);
+                // Check if the event has been put into one of the event array already
+                if (
+                    this.events.votes.find(v => v.data.name === event.data.name)
+                    || this.events.redeems.find(v => v.data.name === event.data.name)
+                ) throw new Error(`TwitchEvents: The event, "${eventName}", has the same name in it's "data" object--that being "${event.data.name}"--as a already existing event.`);
 
+                // Default data
+                const eventData = {
+                    data: event.data,
+                    time: (event.data.type === Types.VOTE) ? this.poll.time : (event.time ? event.time : undefined),
+                    enable(client, forced) {
+                        if (!client) throw new Error(noClientErr);
 
-                    switch (event.data.type) {
-                        case Types.REDEEM:
-                            if (!event.data.reward) throw new Error(`TwitchEvents: The event, "${eventName}", is a "REDEEM" type, but doesn't have the "reward" variable.`);
-                            if (this.#gqlUser.customRewards.find(r => r.title === event.data.reward) == undefined) logger.warn(`TwitchEvents: The Twitch reward named, "${event.data.reward}", wasn't found on the channel, "${this.#gqlUser.login}".`);
+                        event.enable(client);
+                        if (
+                            event.data.type === Types.VOTE 
+                            || forced !== true
+                        ) {
+                            setTimeout(() => { this.disable(client); }, minsToMs(this.time));
+                            logger.info(`TwitchEvents: Enabled "${eventName}" & disabling in ${this.time} minute(s)!`);
+                        } else logger.info(`TwitchEvents: Enabled "${eventName}"!`);
+                    },
+                    disable(client) {
+                        if (!client) throw new Error(noClientErr);
 
-                            this.events.redeems.push({
-                                data: event.data,
-                                enable() {
-                                    event.enable();
-                                    logger.info(`TwitchEvents: Enabled "${eventName}"!`);
-                                }
-                            });
-                        break;
-
-                        case Types.VOTE:
-                            if (!event.disable) throw new Error(`TwitchEvents: The event, "${eventName}", is a "REDEEM" type, but doesn't have the "disable" function.`);
-
-                            this.events.votes.push({
-                                data: event.data,
-                                enable() {
-                                    event.enable();
-                                    logger.info(`TwitchEvents: Enabled "${eventName}"!`);
-                                },
-                                disable() {
-                                    event.disable();
-                                    logger.info(`TwitchEvents: Disabled "${eventName}"!`);
-                                }
-                            });
-                        break;
-                    
-                        default:
-                            throw new Error(`TwitchEvents: Couldn't find the type given for "${eventName}".`);
-                        break;
+                        event.disable(client);
+                        logger.info(`TwitchEvents: Disabled "${eventName}"!`);
                     }
-                } else throw new Error(`TwitchEvents: The event, "${eventName}", doesn't meet the event script requirements.`);
+                };
+
+                // More possible errors & put event in the right spot
+                switch (event.data.type) {
+                    case Types.REDEEM:
+                        if (!event.data.reward) throw new Error(`TwitchEvents: The event, "${eventName}", is a "REDEEM" type, but doesn't have the "reward" variable.`);
+                        if (this.#gqlUser.customRewards.find(r => r.title === event.data.reward) == undefined) logger.warn(`TwitchEvents: The Twitch reward named, "${event.data.reward}", wasn't found on the channel, "${this.#gqlUser.login}", for event file, "${eventName}".`);
+                        this.events.redeems.push(eventData);
+                    break;
+
+                    case Types.VOTE:
+                        if (!event.disable) throw new Error(`TwitchEvents: The event, "${eventName}", is a "VOTE" type, but doesn't have the "disable" function.`);
+                        this.events.votes.push(eventData);
+                    break;
+                
+                    default:
+                        throw new Error(`TwitchEvents: Couldn't find the type given for "${eventName}".`);
+                    break;
+                }
+
+
+                // Rewrite enable & disable script
+                let noClientErr = `TwitchEvents: The "client" arg is required for enabling/disabling events so they know where they are, lol`;
             });
 
 
