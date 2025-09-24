@@ -26,14 +26,16 @@
             <div id="poll" hide>
                 <div class="title">Vote using the number next to the event title!</div>
                 <div class="events"></div>
+                <div class="time-bar" style="width: 100%;"></div>
             </div>
         </div>
+        <iframe class="module" src="/events/viewers"></iframe>
 
 
         <script>
 
-            var poll = document.querySelector('#poll');
-            var pollEvents = poll.querySelector('.events');
+            const poll = document.querySelector('#poll');
+            const pollEvents = poll.querySelector('.events');
             const animationTime = Number(window.getComputedStyle(document.body).getPropertyValue('--fadeIn-animation').split('ms')[0]);
 
 
@@ -56,7 +58,7 @@
 
 
             var client;
-            const socket = io();
+            var socket = io();
             socket.on('connect', () => {
                 sfxs = {
                     "poll-new": new Howl({
@@ -96,13 +98,10 @@
 
 
                     // Update poll information for client
+                    var pollTimerInt;
                     function drawPoll(d) {
                         // Unhide poll
                         poll.removeAttribute('hide');
-
-                        // Sound effects for init/update
-                        if (d.newPoll == true) playSfx('poll-new');
-                        else playSfx('poll-update');
 
                         // Get all events (if any)
                         const allEvents = pollEvents.querySelectorAll(`.event`);
@@ -110,12 +109,14 @@
                         for (let i = 0; i < d.options.length; i++) {
                             const element = d.options[i];
                             const votePercent = d.totalVotes > 0 ? ((element.votes / d.totalVotes) * 100) : 0;
+                            // If existing event div
                             if (allEvents[i]) {
                                 allEvents[i].setAttribute('event-name', element.data.name);
                                 allEvents[i].querySelector(`.percent-bar`).style.width = `${votePercent}%`;
                                 allEvents[i].querySelector(`.number`).innerHTML = i + 1;
                                 allEvents[i].querySelector(`.title`).innerHTML = element.data.desc;
                                 allEvents[i].querySelector(`.data`).innerHTML = element.votes;
+                            // Else, add a new one
                             } else pollEvents.insertAdjacentHTML('beforeend', `
                             <div class="event" event-name="${element.data.name}">
                                 <div class="percent-bar" style="width: ${votePercent}%"></div>
@@ -125,12 +126,42 @@
                             </div>
                             `);
                         }
+
+                        // Stuff for if new poll or notnot
+                        if (d.newPoll) {
+                            playSfx('poll-new');
+                            setPollTimer();
+                        } else if (!d.reInit) playSfx('poll-update');
+                        if (d.reInit) setPollTimer();
+
+
+                        // Set poll time bar
+                        function setPollTimer() {
+                            const pollCreatedDate = new Date(d.startedAt);
+                            const pollEndDate = new Date(pollCreatedDate.getTime() + (d.time * 60 * 1000));
+                            pollTimerInt = setInterval(() => {
+                                const currentDate = new Date();
+                                
+                                // Calc
+                                const totalMs = pollEndDate.getTime() - pollCreatedDate.getTime();
+                                const elapsedMs = currentDate.getTime() - pollCreatedDate.getTime();
+                                const calc = elapsedMs / totalMs;
+
+                                // Set calc to style of time bar
+                                poll.querySelector('.time-bar').style.width = `${calc * 100}%`;
+                            }, 100);
+                        }
                     }
 
 
                     // Picking animation & sfx moment
                     var pickingInt = null;
                     function pickingPoll(d) {
+                        // Stop poll time bar
+                        if (pollTimerInt !== undefined) clearInterval(pollTimerInt);
+                        pollTimerInt = undefined;
+                        poll.querySelector('.time-bar').style.width = `100%`;
+
                         // Get events that tied with in the html poll
                         let tiedEventDivs = [];
                         d.winningOption.forEach(element => {
@@ -155,6 +186,11 @@
 
                     // Show end result on poll
                     function endPoll(d) {
+                        // Stop poll time bar
+                        if (pollTimerInt !== undefined) clearInterval(pollTimerInt);
+                        pollTimerInt = undefined;
+                        poll.querySelector('.time-bar').style.width = `100%`;
+
                         // If we were picking a multi choice
                         if (pickingInt !== null) {
                             clearInterval(pickingInt);
@@ -167,10 +203,10 @@
 
                         // Highlight the result of the poll within the list of events in the html poll
                         function showRes() {
-                            console.log(d);
                             // Disable all expect for result
                             for (let i = 0; i < pollEvents.children.length; i++) {
                                 const element = pollEvents.children[i];
+                                console.log(element);
                                 // Disable this option
                                 if (element.getAttribute('event-name') !== d.winningOption.data.name) element.setAttribute('disable', null);
                                 else element.setAttribute('selected', null);
@@ -194,7 +230,7 @@
 
 
                     // Draw poll if there's a current poll happenin'
-                    if (client.poll.current.voting == true) drawPoll(client.poll.current);
+                    if (client.poll.current.voting == true) drawPoll({...client.poll.current, reInit: true});
 
 
                     // Make listeners

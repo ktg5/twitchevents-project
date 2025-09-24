@@ -12,6 +12,8 @@ const { logger } = require('./logger');
 const { webAuth } = require('./webauth');
 const InputsListener = require('./inputListener');
 const inputs = new InputsListener.InputListener();
+const { Player } = require("./player");
+const { Tts } = require('./tts');
 
 
 // Create readline interface for listening for console commands
@@ -25,11 +27,12 @@ if (process.stdin.isTTY) process.stdin.setRawMode(true);
 /**
  * @typedef {{
  *      startOnInit: boolean,
+ *      votingTime: number,
  *      timeout: number,
- *      time: number,
  *      current: {
  *          voting: boolean,
- *          time: number,
+ *          time: sameAs_votingTime,
+ *          startedAt: string
  *          options: VoteEvent[]
  *          voters: Voter[],
  *          totalVotes: number,
@@ -41,6 +44,13 @@ if (process.stdin.isTTY) process.stdin.setRawMode(true);
  *          endTimeout: timeout
  *      }
  *  }} PollData
+ */
+
+/**
+ * @typedef {{
+ *      event: VoteEvent | null,
+ *      interval: interval | null
+ * }} CurrentEventData
  */
 
 /**
@@ -130,6 +140,7 @@ function calcDateDiffToTxt(date) {
 // Other
 const maxEventsPerVote = 4;
 var addedEvents = false;
+const pollPickRandomTime = 3000;
 
 
 // Heere's where the fun begins
@@ -253,17 +264,17 @@ class Client {
         this.web = {
             port: port,
             /**
-             * Sends data to TwitchEvents web clients via socket.io
+             * Sends data to TwitchEvents web clients via socket.io without having to pass through the specific user format
              * @param {string} channel 
-             * @param {*} data 
+             * @param {*} [data] 
              */
             sendEmit: (channel, data) => {
-                if (
-                    !channel
-                    || !data
-                ) throw new Error('TwitchEvents: "channel" or "data" need to be defined.');
+                if (!channel) throw new Error('TwitchEvents: "channel" need to be defined.');
                 // Send emit over io
-                this.#io.emit(`${this.user}@${channel}`, data);
+                this.#io.emit(`${this.web.getListener(channel)}`, data);
+            },
+            getListener: (channel) => {
+                return `${this.user}@${channel}`;
             }
         };
         this.#io = webData.io;
@@ -282,7 +293,7 @@ class Client {
                             hermes: this.hermes,
                             events: this.events
                         });
-                        logger.info('TwitchEvents: Sent TwitchEvents Client info to web client.');
+                        // logger.info('TwitchEvents: Sent TwitchEvents Client info to web client.');
                     }
                 }, 100);
             });
@@ -297,9 +308,9 @@ class Client {
      * @this {Client} - Refers to the current instance of the Client class.
      * @param {{
      *      user: string,
+     *      eventTime: number,
      *      poll: {
      *          startOnInit: boolean,
-     *          timeout: number,
      *          time: number
      *      }
      * }} data - Data related to the user and poll configuration.
@@ -307,17 +318,26 @@ class Client {
      * @throws {Error} If the data object is invalid or contains missing properties.
      */
     async watch(data) {
-        if (!data || typeof data !== "object") throw new Error("TwitchEvents: \"data\", is either not defined or is not a object when making a new \"Client\".")
-        if (!data.user || typeof data.user !== "string") throw new Error("TwitchEvents: \"data.user\", is either not defined or not a string when making a new \"Client\".");
-        if (!data.poll || typeof data.poll !== "object") throw new Error("TwitchEvents: \"data.pollMins\", is either not defined or not a number when making a new \"Client\".");
+        if (!data || typeof data !== "object") throw new Error(`TwitchEvents.Client: "data", is either not defined or is not a "object".`)
+        if (!data.user || typeof data.user !== "string") throw new Error(`TwitchEvents.Client: "data.user", is either not defined or not a "string".`);
+        if (!data.eventTime || typeof data.eventTime !== "number") throw new Error(`TwitchEvents.Client: "data.eventTime", is either not defined or not a "number".`);
+        if (!data.poll || typeof data.poll !== "object") throw new Error(`TwitchEvents.Client: "data.pollMins", is either not defined or not a "object".`);
 
 
         // Set data to this
         this.user = data.user;
+        this.eventTime = data.eventTime;
         /**
          * @type {PollData}
          */
         this.poll = this.#defaultPollData(data);
+        /**
+         * @type {CurrentEventData[]}
+         */
+        this.currentEvent = {
+            event: null,
+            interval: null
+        }
 
 
         // First, let's a get a Hermes instance running
@@ -339,6 +359,8 @@ class Client {
             channels: [ this.user ]
         });
         this.irc.connect();
+        // Make listener for polls
+        this.irc.on('message', (channel, tags, message) => this.#pollIrc(channel, tags, message));
 
 
         // ###########
@@ -394,8 +416,9 @@ class Client {
             this.poll.sets.interval = null;
             logger.info(`TwitchEvents: Cleared new poll interval`);
         } else {
-            const timeCalc = minsToMs(this.poll.timeout) + minsToMs(this.poll.time);
-            this.poll.sets.interval = setInterval(async () => { await this.#pollStart(); }, timeCalc);
+            // So yeah, it's the poll timeouot + time to vote. Event time doesn't account in here, but it can if you set the times correctly......................................................nerd...
+            const timeCalc = minsToMs(this.poll.timeout) + minsToMs(this.poll.votingTime);
+            this.poll.sets.interval = setInterval(async () => { await this.#pollStart(); }, timeCalc + (pollPickRandomTime * 2)); // The extra is added to be a "just in case" moment, if ya'know what I mean
             logger.info(`TwitchEvents: Intervaling new polls every ${timeCalc / 60 / 1000} minute(s)...`);
         }
     }
@@ -410,6 +433,7 @@ class Client {
             current: {
                 voting: false,
                 time: 0,
+                startedAt: null,
                 options: [],
                 voters: [],
                 totalVotes: 0,
@@ -477,7 +501,8 @@ class Client {
 
         // Send to all clients
         this.poll.current.voting = true;
-        this.poll.current.time = this.poll.time;
+        this.poll.current.time = this.poll.votingTime;
+        this.poll.current.startedAt = new Date();
         this.poll.current.options = pollList;
         this.poll.current.totalVotes = 0;
         this.poll.current.displayType = "VOTES";
@@ -485,13 +510,8 @@ class Client {
         logger.info(`TwitchEvents: Started a new poll! Closes in ${this.poll.current.time} minute(s)!`);
 
 
-        // Listen to chat messages
-        logger.info(`TwitchEvents: Listening in ${this.user}'s chat for messages relating to poll...`);
-        this.irc.on('message', this.#onIrcMessage);
-
-
         // Wait the poll time provided & end everything
-        this.poll.sets.endTimeout = setTimeout(() => { this.#pollEnd() }, minsToMs(this.poll.time));
+        this.poll.sets.endTimeout = setTimeout(() => { this.#pollEnd() }, minsToMs(this.poll.votingTime));
     }
 
     /**
@@ -499,8 +519,12 @@ class Client {
      * @param {string} channel 
      * @param {tmi.ChatUserstate} tags 
      * @param {string} message 
+     * @param {Client} client
      */
-    #onIrcMessage(channel, tags, message) {
+    #pollIrc(channel, tags, message, client) {
+        // If a poll isn't happening, no need to run any of this
+        if (this.poll.current.voting != true) return;
+
         const sender = tags['username'];
         const sentNumber = Number(message) - 1;
 
@@ -538,7 +562,7 @@ class Client {
         /**
          * @param {Client} client 
          */
-        function sendUpdate(client) { client.web.sendEmit(`${client.user}@poll-update`, client.poll.current) };
+        function sendUpdate(client) { client.web.sendEmit(`poll-update`, client.poll.current) };
     }
 
     /**
@@ -546,15 +570,13 @@ class Client {
      * @returns {Promise<boolean>} - If the poll ending was a success
      */
     #pollEnd() {
-        return new Promise((resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             // Set voting to false
             this.poll.current.voting = false;
 
             // Clear timeout
             clearTimeout(this.poll.sets.endTimeout);
             this.poll.sets.endTimeout = null;
-            // Stop watching chat
-            this.irc.removeListener('message', this.#onIrcMessage);
 
             // Get event winner information
             this.poll.current.options.forEach((option) => {
@@ -574,12 +596,12 @@ class Client {
             if (Array.isArray(this.poll.current.winningOption)) {
                 // Pick a random one after sending a emit for the picking animation
                 logger.info('TwitchEvents: Picking one of the winning events...');
-                this.web.sendEmit(`${this.user}@poll-picking`, this.poll.current);
+                this.web.sendEmit(`poll-picking`, this.poll.current);
                 
-                setTimeout(() => {
+                setTimeout(async () => {
                     this.poll.current.winningOption = this.poll.current.winningOption[Math.floor(Math.random() * this.poll.current.winningOption.length)];
                     end(this);
-                }, 3000);
+                }, pollPickRandomTime);
             } else end(this);
 
             // End
@@ -588,13 +610,20 @@ class Client {
              */
             function end(client) {
                 // Send emits
-                client.web.sendEmit(`${client.user}@poll-end`, client.poll.current);
+                client.web.sendEmit(`poll-end`, client.poll.current);
 
                 // For coolness......... lmao
                 setTimeout(() => {
                     // Enable option
                     if (!client.poll.current.winningOption.enable) console.log(client.poll.current.winningOption);
                     client.poll.current.winningOption.enable(client);
+                    client.currentEvent = {
+                        event: client.poll.current.winningOption,
+                        interval: null
+                    };
+
+                    // Make interval for current event to disable it after a while
+
 
                     // Clear everythin'
                     const pastPoll = { ...client.poll.current };
@@ -603,6 +632,8 @@ class Client {
 
                     logger.info('TwitchEvents: Current poll has ended!');
                 }, 1000);
+
+                resolve();
             }
         });
     }
@@ -666,15 +697,12 @@ class Client {
                 // Default data
                 const eventData = {
                     data: event.data,
-                    time: (event.data.type === Types.VOTE) ? this.poll.time : (event.time ? event.time : undefined),
+                    time: event.time ? event.time : undefined,
                     enable(client, forced) {
                         if (!client) throw new Error(noClientErr);
 
                         event.enable(client);
-                        if (
-                            event.data.type === Types.VOTE 
-                            || forced !== true
-                        ) {
+                        if (event.data.type === Types.REDEEM) {
                             setTimeout(() => { this.disable(client); }, minsToMs(this.time));
                             logger.info(`TwitchEvents: Enabled "${eventName}" & disabling in ${this.time} minute(s)!`);
                         } else logger.info(`TwitchEvents: Enabled "${eventName}"!`);
@@ -777,4 +805,4 @@ const Types = Object.freeze({
 });
 
 
-module.exports = { Client, Event, Types, inputs, Point: InputsListener.Point };
+module.exports = { Client, Event, Types, inputs, Point: InputsListener.Point, Player, Tts };

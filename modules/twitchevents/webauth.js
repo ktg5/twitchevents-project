@@ -16,7 +16,7 @@ async function webAuth(port = 0, htmlPath = "") {
         app
         || server
         || io
-    ) throw new Error('TwitchEvents Event Server: You can only make one TwitchEvents website per node instance!');
+    ) throw new Error('TwitchEvents Event Web: You can only make one TwitchEvents website per node instance!');
     fs.readdirSync(htmlPath);
 
 
@@ -40,14 +40,14 @@ async function webAuth(port = 0, htmlPath = "") {
 
         // Start the server
         server.listen(port, () => {
-            logger.info(`TwitchEvents Event Server: Running on http://localhost:${port}`);
+            logger.info(`TwitchEvents Event Web: Running on http://localhost:${port}`);
             resolve({ app, server, io });
         });
 
 
         // IO requests
         io.on('connection', (socket) => {
-            logger.info(`TwitchEvents Event Server: New client: ${socket.id}`);
+            // logger.info(`TwitchEvents Event Web: New client: ${socket.id}`);
         });
     })
 }

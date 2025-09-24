@@ -2,9 +2,10 @@ const TwitchEvents = require(`../../modules/twitchevents`);
 
 
 const holdKeyTime = 500;
+const nonoSfx = new TwitchEvents.Player('system', `${__dirname}../../../assets/sfx/nono.wav`);
 module.exports = {
     data: {
-        name: "viewers-control",
+        name: "viewer-control",
         desc: "It's the viewers' turn!",
         type: TwitchEvents.Types.VOTE
     },
@@ -38,6 +39,7 @@ module.exports = {
         async movedMouseFunc(d) {
             if (d.synthetic) return;
             TwitchEvents.inputs.moveMouse(new TwitchEvents.Point( 300, 300 ));
+            nonoSfx.play();
         }
     },
 
@@ -131,6 +133,7 @@ module.exports = {
         }
 
         client.irc.on('message', this.func.msgToInput);
+        client.web.sendEmit('viewerinputs-show', null);
         TwitchEvents.inputs.on('keyPressed', this.func.pressedFunc);
         TwitchEvents.inputs.on('mousePressed', this.func.pressedMouseFunc);
         TwitchEvents.inputs.on('mouseMoved', this.func.movedMouseFunc);
@@ -138,6 +141,7 @@ module.exports = {
 
     async disable(client) {
         client.irc.removeListener('message', this.func.msgToInput);
+        client.web.sendEmit('viewersinputs-hide', null);
         TwitchEvents.inputs.off('keyPressed', this.func.pressedFunc);
         TwitchEvents.inputs.off('mousePressed', this.func.pressedMouseFunc);
         TwitchEvents.inputs.off('mouseMoved', this.func.movedMouseFunc);

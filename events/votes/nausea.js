@@ -10,7 +10,7 @@ module.exports = {
     },
 
 
-    async enable(event) {
+    async enable(client) {
         const radius = 5
         let t = 0;
         effectInterval = setInterval(async () => {
@@ -26,7 +26,7 @@ module.exports = {
         }, 10);
     },
 
-    async disable(event) {
+    async disable(client) {
         clearInterval(effectInterval);
     }
 }
