@@ -26,7 +26,8 @@ if (process.stdin.isTTY) process.stdin.setRawMode(true);
 
 /**
  * @typedef {{
- *      startOnInit: boolean,
+ *      startOnInit: boolean | null,
+ *      disableOnInit: boolean | null,
  *      votingTime: number,
  *      timeout: number,
  *      current: {
@@ -80,6 +81,7 @@ if (process.stdin.isTTY) process.stdin.setRawMode(true);
  * @prop {number} [time] - The amount of time for the event to last
  * @prop {DisableEvent} [disable] - Disable event
  * @prop {EnableEvent} enable - Enable or run event function
+ * @prop {boolean} enabled - If the event is running at the moment
  */
 
 /**
@@ -369,10 +371,8 @@ class Client {
         // DEBUG:
         // setTimeout(e => { this.#pollStart(); }, 1000);
         // DEFAULT:
-        this.#togglePollInt();
-        setTimeout(() => {
-            if (this.poll.startOnInit == true) this.#pollStart();
-        }, 1000);
+        if (!this.poll.disableOnInit && this.poll.disableOnInit !== true) this.#togglePollInt();
+        if (this.poll.startOnInit === true) setTimeout(() => { this.#pollStart(); }, 1000);
 
 
         // Set the events object
@@ -700,11 +700,30 @@ class Client {
                     time: event.time ? event.time : undefined,
                     enable(client, forced) {
                         if (!client) throw new Error(noClientErr);
+                        // Check if the event is running/enabled at this time
+                        if (
+                            event.data.type === Types.VOTE
+                            || event.time
+                        ) {
+                            if (event.enabled) logger.error(`TwitchEvents: The event, "${eventName}" is already enabled. Disable it to enable it again.`);
+                            
+                        }
 
                         event.enable(client);
-                        if (event.data.type === Types.REDEEM) {
+                        // Auto disable for redeems with the "time" value
+                        if (
+                            event.data.type === Types.REDEEM
+                            && event.time
+                        ) {
+                            // Throw error if the "time" value is set but no disable function is made
+                            if (
+                                event.time 
+                                && !event.disable
+                            ) throw new Error(`TwitchEvents: The event, "${eventName}" has a "time" value set, but doesn't have a "disable" function!`);
+
                             setTimeout(() => { this.disable(client); }, minsToMs(this.time));
                             logger.info(`TwitchEvents: Enabled "${eventName}" & disabling in ${this.time} minute(s)!`);
+                        // Normal--just log we're enabling
                         } else logger.info(`TwitchEvents: Enabled "${eventName}"!`);
                     },
                     disable(client) {
@@ -735,7 +754,7 @@ class Client {
 
 
                 // Rewrite enable & disable script
-                let noClientErr = `TwitchEvents: The "client" arg is required for enabling/disabling events so they know where they are, lol`;
+                let noClientErr = `TwitchEvents: The "client" arg is required for enabling/disabling events, so they know where they are, lol`;
             });
 
 

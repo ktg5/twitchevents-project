@@ -24,7 +24,7 @@ async function webAuth(port = 0, htmlPath = "") {
         // Make the server
         app = express();
         server = http.createServer(app);
-        io = socketIo(server);
+        io = socketIo(server);     
 
         // Modules to be used on web
         app.use('/modules/socket.io', express.static(`${__dirname}/../../node_modules/socket.io`));
@@ -34,9 +34,7 @@ async function webAuth(port = 0, htmlPath = "") {
         app.set('trust proxy', true);
 
         // Put da page on there!!!!!!!
-        app.use(express.static(`${htmlPath}`, {
-            extensions: 'html'
-        }));
+        app.use(express.static(`${htmlPath}`));
 
         // Start the server
         server.listen(port, () => {

@@ -22,7 +22,7 @@ class InputListener extends EventTarget {
     #lastSyntheticEvent = null;
     lastMousePos = { x: 0, y: 0 };
     /**
-     * @enum
+     * @enum {nut.Key}
      */
     Keys = nut.Key;
     /**
@@ -180,8 +180,11 @@ class InputListener extends EventTarget {
         let targetClick = this.#handleMouseButton(button);
 
         this.#lastSyntheticEvent = { type: thisEventName, targetClick, time: Date.now() };
+        console.log('click');
         await nut.mouse.click(targetClick);
-        this.#emit(thisEventName, { targetClick, synthetic: true });
+        this.#emit("mousePressed", { 0: targetClick, synthetic: true });
+        this.#emit("mouseReleased", { 0: targetClick, synthetic: true });
+        this.#emit(thisEventName, { 0: targetClick, synthetic: true });
     }
 
     /**
@@ -196,7 +199,7 @@ class InputListener extends EventTarget {
 
         this.#lastSyntheticEvent = { type: thisEventName, targetClick, time: Date.now() };
         await nut.mouse.pressButton(targetClick);
-        this.#emit(thisEventName, { targetClick, synthetic: true });
+        this.#emit(thisEventName, { 0: targetClick, synthetic: true });
     }
 
     /**
@@ -211,7 +214,7 @@ class InputListener extends EventTarget {
 
         this.#lastSyntheticEvent = { type: thisEventName, targetClick, time: Date.now() };
         await nut.mouse.releaseButton(targetClick);
-        this.#emit(thisEventName, { targetClick, synthetic: true });
+        this.#emit(thisEventName, { 0: targetClick, synthetic: true });
     }
 
 
@@ -280,7 +283,7 @@ class InputListener extends EventTarget {
     }
 
     /**
-     * @param {string} event
+     * @param {TwitchEventInputEvents} event
      * @param {(data: EventPayloads[K]) => void} callback
      */
     on(event, callback) {
@@ -294,7 +297,7 @@ class InputListener extends EventTarget {
     }
 
     /**
-     * @param {string} event
+     * @param {TwitchEventInputEvents} event
      * @param {(data: EventPayloads[K]) => void} callback
      */
     off(event, callback) {

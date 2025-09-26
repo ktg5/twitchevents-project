@@ -11,11 +11,11 @@ module.exports = {
 
 
     async enable(client) {
-        const radius = 5
+        const radius = 20
         let t = 0;
         effectInterval = setInterval(async () => {
             // Effect speed
-            t += 0.01;
+            t += 0.03;
 
             // Position
             const x = radius * Math.sin(t);

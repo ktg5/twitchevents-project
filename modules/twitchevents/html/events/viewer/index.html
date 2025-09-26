@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <link rel="stylesheet" href="/events/viewer/style.css">
+
+
+        <script src="keyEnum.js"></script>
+
+
+        <style>
+            :root {
+                --fadeIn-animation: 250ms;
+
+                --key-normal-colour: #555;
+                --key-pressed-colour: #1b75e3;
+                --key-pressed-shadow: inset 0 0 0.35vw 0.35vw var(--key-normal-colour);
+
+                --input-group-height: 14vw;
+                --min-key-size: 3vw;
+                --key-spacing: .2vw;
+                /*
+                This gets applied very column minus one, 'cuz the number row & F-key row don't have modifiers
+                avgKeySize + (modifierKeySize * (keyPos.y - 1))
+                */
+                --modifier-key-size: 1vw;
+            }
+
+
+            /* Position for overlay */
+            #key-indicator-container {
+                bottom: 1vw;
+                left: 1vw;
+            }
+
+            /* Width for keyboard input */
+            #key-indicator .input-group#keys {
+                width: 18vw;
+            }
+            /* Width for mouse input */
+            #key-indicator .input-group#mouse {
+                width: 14vw;
+            }
+
+            /* Size for mouse base */
+            #key-indicator .input-group#mouse .key-container {
+                width: 6vw;
+                height: 8vw;
+            }
+        </style>
+    </head>
+
+
+    <body>
+        <div id="key-indicator-container" hide>
+            <div class="desc">
+                press/hold a key or button using what you see below
+                <br>
+                keyboard on the left, mouse on the right
+                <br>
+                for the mouse, you can type "[input] h" to hold a mouse button
+            </div>
+
+            <div id="key-indicator">
+                <div class="input-group" id="keys">
+                    <div class="key-container"></div>
+                </div>
+                <div class="input-group" id="mouse">
+                    <div class="key-container"></div>
+                    <div class="movement-visualizer">
+                        <div key-char="mu">
+                            <div class="txt">mu</div>
+                            <div class="arrow"></div>
+                        </div>
+                        <div key-char="md">
+                            <div class="txt">md</div>
+                            <div class="arrow"></div>
+                        </div>
+                        <div key-char="ml">
+                            <div class="txt">ml</div>
+                            <div class="arrow"></div>
+                        </div>
+                        <div key-char="mr">
+                            <div class="txt">mr</div>
+                            <div class="arrow"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <script>
+
+            // Viewport percent to pixels functions code spinnets I found like years ago lol
+            function vh(percent) {
+                var h = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
+                return (percent * h) / 100;
+            }
+            
+            function vw(percent) {
+                var w = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+                return (percent * w) / 100;
+            }
+
+            // Divs
+            const keyIndiDiv = document.querySelector('#key-indicator-container')
+            const keysDiv = keyIndiDiv.querySelector('#keys .key-container');
+            const mouseDiv = keyIndiDiv.querySelector('#mouse .key-container');
+
+            // Sizes
+            const bodyStyle = window.getComputedStyle(document.body);
+            const animationTime = Number(bodyStyle.getPropertyValue('--fadeIn-animation').split('ms')[0]);
+            const keySize = Number(bodyStyle.getPropertyValue('--min-key-size').split('vw')[0]);
+            const keySpacing = Number(bodyStyle.getPropertyValue('--key-spacing').split('vw')[0]);
+            const modifierKeySize = Number(bodyStyle.getPropertyValue('--modifier-key-size').split('vw')[0]);
+
+            var client;
+            setTimeout(() => {
+                // Start
+                client = window.parent.client;
+                socket = window.parent.socket;
+
+
+                // If client didn't init yet, reload everything 'cause FUCK YOU
+                if (!client) window.parent.location.reload();
+
+
+                // Make key divs inside of .input-groups
+                function formatKey(key) {
+                    switch (key.key) {
+                        case "LeftShift":
+                            key.displayKey = "Shift"
+                        break;
+                    }
+
+                    return `
+                        <div class="key" key-type="key" ${key.row !== undefined && key.col !== undefined ? `pos="${key.row},${key.col}"` : ""} key-char="${key.key ? key.key.toString().toLowerCase() : `mkey${key.mouse.toString().toLowerCase()}`}">
+                            <div class="key-display">${key.displayKey ? key.displayKey : (key.key ? key.key : key.mouse)}</div>
+                        </div>
+                    `; 
+                }
+
+                const startingCol = 1;
+                const keysList = [
+                    {
+                        key: 1,
+                        row: 1,
+                        col: 1,
+                    },
+                    {
+                        key: 2,
+                        row: 2,
+                        col: 1
+                    },
+                    {
+                        key: 3,
+                        row: 3,
+                        col: 1
+                    },
+                    {
+                        key: 4,
+                        row: 4,
+                        col: 1
+                    },
+                    {
+                        key: 'W',
+                        row: 2,
+                        col: 2
+                    },
+                    {
+                        key: 'A',
+                        row: 1,
+                        col: 3
+                    },
+                    {
+                        key: 'S',
+                        row: 2,
+                        col: 3
+                    },
+                    {
+                        key: 'D',
+                        row: 3,
+                        col: 3
+                    },
+                    {
+                        key: 'LeftShift',
+                        row: 0,
+                        col: 4
+                    },
+                    {
+                        key: 'C',
+                        row: 3,
+                        col: 4
+                    },
+                ];
+                keysList.forEach((key) => {
+                    keysDiv.insertAdjacentHTML('beforeend', formatKey(key));
+                });
+                const mouseButtons = [{ mouse: 'l' }, { mouse: 'r' }, { mouse: 'm' }]; // Don't change the position of these or you will have to change the event code too
+                mouseButtons.forEach((key) => {
+                    mouseDiv.insertAdjacentHTML('beforeend', formatKey(key));
+                });
+
+
+                // Move keys to their position
+                const avgKeySize = keySize + keySpacing;
+                for (let i = 0; i < keysDiv.children.length; i++) {
+                    const keyDiv = keysDiv.children[i];
+                    
+                    // Get pos attr.
+                    const keyPos = { x: Number(keyDiv.getAttribute('pos').split(',')[0]), y: Number(keyDiv.getAttribute('pos').split(',')[1]) };
+                    // Move div to our keyPos points + (modifierKeySize * y)
+                    const calcPos = { x: (avgKeySize * keyPos.x), y: (avgKeySize * (keyPos.y - startingCol)) };
+                    // See if col has a modifier key (tab, caps, shift)
+                    /// 
+                    if (keyPos.y > 1 && keyPos.x == 0) keyDiv.style.width = `${avgKeySize + (modifierKeySize * (keyPos.y - 1))}vw`;
+                    /// Isn't a modifier
+                    else if (keyPos.y > 1) calcPos.x = calcPos.x + (modifierKeySize * (keyPos.y - 1));
+                    // Set
+                    keyDiv.style.left = `${calcPos.x}vw`;
+                    keyDiv.style.top = `${calcPos.y}vw`;
+                }
+
+                
+                function getKeyDiv(d) {
+                    let selector;
+                    if (d.key != null) selector = `[key-char="${getKeyChar(d.key).toLowerCase()}"]`;
+                    else if (d.mouse != null) selector = `[key-char="mkey${mouseButtons[d.mouse].mouse.toLowerCase()}"]`;
+                    const el = document.querySelector(selector);
+                    return el;
+                }
+
+
+                // Our Q's
+                // Show & hide
+                socket.on(`${client.user}@viewer_c-on`, () => { keyIndiDiv.removeAttribute('hide'); });
+                socket.on(`${client.user}@viewer_c-off`, () => { keyIndiDiv.setAttribute('hide', ''); });
+
+                // Toggle keys
+                function pressOrRelease(d) {
+                    let keyDiv = getKeyDiv(d);
+                    keyDiv.removeAttribute('key-press');
+                    keyDiv.removeAttribute('key-release');
+                    return keyDiv;
+                }
+                socket.on(`${client.user}@viewer_c-press`, (d) => {
+                    let keyDiv = pressOrRelease(d);
+                    setTimeout(() => { keyDiv.setAttribute('key-press', ''); }, 1);
+                });
+                socket.on(`${client.user}@viewer_c-release`, (d) => {
+                    let keyDiv = pressOrRelease(d);
+                    setTimeout(() => { keyDiv.setAttribute('key-release', ''); }, 1);
+                });
+
+                // Show mouse movements by viewers
+                socket.on(`${client.user}@viewer_c-mmove`, (d) => {
+                    let moveDiv = mouseDiv.parentElement.querySelector(`.movement-visualizer [key-char="${d}"]`);
+                    moveDiv.removeAttribute('key-press');
+                    setTimeout(() => { moveDiv.setAttribute('key-press', ''); }, 1);
+                });
+            }, 250);
+
+        </script>
+    </body>
+</html>

@@ -4,7 +4,8 @@
     "eventTime": 3,
     "poll": {
         "startOnInit": false,
+        "disableOnInit": true,
         "votingTime": 1,
-        "timeout": 2
+        "timeout": 3
     }
 }

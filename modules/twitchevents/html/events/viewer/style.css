@@ -1,0 +1,225 @@
+:root {
+    --text-shadow: 0 0 0.25vw black;
+    --text-shadow-dup: var(--text-shadow), var(--text-shadow), var(--text-shadow);
+}
+
+@font-face {
+    src: url(/@sets/fonts/Montserrat-VariableFont_wght.woff2) format("woff2");
+    font-family: "Montserrat";
+    font-weight: 100 900;
+    font-style: normal;
+}
+
+body {
+    font-family: 'Montserrat';
+    margin: 0 !important;
+}
+
+* {
+    transition: opacity var(--fadeIn-animation);
+}
+
+[hide] {
+    opacity: 0;
+}
+
+
+
+#key-indicator-container {
+    position: absolute;
+}
+
+#key-indicator-container .desc {
+    color: white;
+    text-shadow: var(--text-shadow-dup);
+    text-align: center;
+    font-size: 1vw;
+    width: fit-content;
+    margin: auto;
+    margin-bottom: .5vw;
+}
+
+#key-indicator {
+    display: flex;
+}
+
+#key-indicator .input-group {
+    height: var(--input-group-height);
+}
+
+#key-indicator .input-group .key-container {display: flex;position: relative;justify-content: center;}
+
+#key-indicator .input-group .key {
+    background: var(--key-normal-colour);
+    position: absolute;
+    color: white;
+    font-size: 1vw;
+    align-content: center;
+    justify-items: center;
+    width: max-content;
+    min-width: var(--min-key-size);
+    height: var(--min-key-size);
+    margin: var(--key-spacing);
+}
+
+#key-indicator .input-group .key[key-press] {
+    background: var(--key-pressed-colour);
+    box-shadow: var(--key-pressed-shadow);
+}
+
+#key-indicator .input-group .key[key-release] {
+    box-shadow: var(--key-pressed-shadow);
+    animation: keyReleased var(--fadeIn-animation) ease-in-out;
+}
+
+#key-indicator .input-group .key .key-display {
+    width: fit-content;
+}
+
+
+#key-indicator .input-group#mouse {
+    position: relative;
+}
+
+#key-indicator .input-group#mouse .key-container {
+    background: var(--key-normal-colour);
+    display: block;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    border-radius: 2vw;
+    margin: auto;
+    overflow: auto;
+}
+
+#key-indicator .input-group#mouse .key {
+    box-shadow: 0 0 0 4px black;
+    position: absolute;
+    width: 50%;
+    min-width: 0;
+    height: 50%;
+    margin: 0;
+}
+
+#key-indicator .input-group#mouse .key[key-char="mkeyr"] {
+    right: 0;
+}
+
+#key-indicator .input-group#mouse .key[key-char="mkeym"] {
+    background: grey;
+    box-shadow: inset 0 0 0 4px black;
+    width: 15%;
+    height: 25%;
+    top: 1.75vw;
+    left: 0;
+    right: 0;
+    margin: auto;
+}
+
+#key-indicator .input-group#mouse .movement-visualizer {
+    position: absolute;
+    font-size: 1vw;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+}
+
+#key-indicator .input-group#mouse .movement-visualizer [key-char] {
+    color: white;
+    text-shadow: var(--text-shadow-dup);
+    position: absolute;
+    width: 3vw;
+    height: 2vw;
+}
+
+#key-indicator .input-group#mouse .movement-visualizer [key-char="mu"] {
+    left: 0;
+    right: 0;
+    margin: auto;
+}
+
+#key-indicator .input-group#mouse .movement-visualizer [key-char="md"] {
+    rotate: 180deg;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: auto;
+}
+
+#key-indicator .input-group#mouse .movement-visualizer [key-char="md"] .txt {
+    rotate: 180deg;
+}
+
+#key-indicator .input-group#mouse .movement-visualizer [key-char="ml"] {
+    rotate: -90deg;
+    top: 0;
+    bottom: 0;
+    margin: auto;
+}
+
+#key-indicator .input-group#mouse .movement-visualizer [key-char="ml"] .txt {
+    rotate: 90deg;
+}
+
+#key-indicator .input-group#mouse .movement-visualizer [key-char="mr"] {
+    rotate: 90deg;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    margin: auto;
+}
+
+#key-indicator .input-group#mouse .movement-visualizer [key-char="mr"] .txt {
+    rotate: -90deg;
+}
+
+#key-indicator .input-group#mouse .movement-visualizer [key-char] .txt {
+    position: absolute;
+    width: fit-content;
+    height: fit-content;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    margin: auto;
+}
+
+#key-indicator .input-group#mouse .movement-visualizer [key-char] .arrow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 20"><polygon points="15,0 30,20 0,20" /></svg>') no-repeat center;
+    mask-size: contain;
+    background: rgb(0 0 0 / 25%);
+    z-index: -1;
+}
+
+#key-indicator .input-group#mouse .movement-visualizer [key-char][key-press] .arrow {
+    animation: mouseMoved var(--fadeIn-animation) cubic-bezier(0.75, 0.05, 1, 1);
+}
+
+
+
+@keyframes keyReleased {
+    0% {
+        background: var(--key-pressed-colour);
+    }
+    100% {
+        background: var(--key-normal-colour);
+    }
+}
+
+@keyframes mouseMoved {
+    0% {
+        background: var(--key-pressed-colour);
+    }
+    100% {
+        background: rgb(0 0 0 / 25%);
+    }
+}

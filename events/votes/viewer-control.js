@@ -1,7 +1,12 @@
 const TwitchEvents = require(`../../modules/twitchevents`);
 
 
-const holdKeyTime = 500;
+const holdKeyTime = 1000;
+const holdMouseTime = 1000;
+var toggledKeys = {};
+
+const mouseMove = 300;
+
 const nonoSfx = new TwitchEvents.Player('system', `${__dirname}../../../assets/sfx/nono.wav`);
 module.exports = {
     data: {
@@ -46,26 +51,47 @@ module.exports = {
 
 
     async enable(client) {
-        /**
-         * Custom function that holds a key for the `holdKeyTime`
-         * @param {TwitchEvents.inputs.Keys} key 
-         */
         function pressKey(key) {
             TwitchEvents.inputs.holdKey(key);
+            client.web.sendEmit('viewer_c-press', { key: key });
             setTimeout(() => {
                 TwitchEvents.inputs.releaseKey(key);
+                client.web.sendEmit('viewer_c-release', { key: key });
             }, holdKeyTime);
         }
 
-        /**
-         * Custom function that holds a mouse button for the `holdKeyTime`
-         * @param {number} button
-         */
-        function holdMouseBtn(button) {
+        function toggleKey(key) {
+            console.log(toggledKeys);
+            // If key is already toggled, release it
+            if (toggledKeys[key]) {
+                delete toggledKeys[key];
+                TwitchEvents.inputs.releaseKey(key);
+                client.web.sendEmit('viewer_c-release', { key: key });
+                console.log(toggledKeys);
+            // Else hold it
+            } else {
+                TwitchEvents.inputs.holdKey(key);
+                client.web.sendEmit('viewer_c-press', { key: key });
+                toggledKeys[key] = key;
+            }
+        }
+
+
+        function clickMouseBtn(button) {
             TwitchEvents.inputs.holdMouse(button);
             setTimeout(() => {
                 TwitchEvents.inputs.releaseMouse(button);
-            }, holdKeyTime);
+            }, 10);
+            client.web.sendEmit('viewer_c-release', { mouse: button })
+        }
+
+        function holdMouseBtn(button) {
+            TwitchEvents.inputs.holdMouse(button);
+            client.web.sendEmit('viewer_c-press', { mouse: button });
+            setTimeout(() => {
+                TwitchEvents.inputs.releaseMouse(button);
+                client.web.sendEmit('viewer_c-release', { mouse: button });
+            }, holdMouseTime);
         }
 
 
@@ -102,38 +128,50 @@ module.exports = {
                     pressKey(TwitchEvents.inputs.Keys.Num4);
                 break;
 
+                // Keys to only be held
+                case 'shift':
+                    toggleKey(TwitchEvents.inputs.Keys.LeftShift);
+                break;
+                case 'c':
+                    toggleKey(TwitchEvents.inputs.Keys.C);
+                break;
+
                 // Handle mouse movement
                 case 'mu':
-                    TwitchEvents.inputs.moveMouse(new TwitchEvents.Point( 0, -100 ));
+                    TwitchEvents.inputs.moveMouse(new TwitchEvents.Point( 0, -mouseMove ));
+                    client.web.sendEmit('viewer_c-mmove', 'mu');
                 break;
                 case 'md':
-                    TwitchEvents.inputs.moveMouse(new TwitchEvents.Point( 0, 100 ));
+                    TwitchEvents.inputs.moveMouse(new TwitchEvents.Point( 0, mouseMove ));
+                    client.web.sendEmit('viewer_c-mmove', 'md');
                 break;
                 case 'ml':
-                    TwitchEvents.inputs.moveMouse(new TwitchEvents.Point( -100, 0 ));
+                    TwitchEvents.inputs.moveMouse(new TwitchEvents.Point( -mouseMove, 0 ));
+                    client.web.sendEmit('viewer_c-mmove', 'ml');
                 break;
                 case 'mr':
-                    TwitchEvents.inputs.moveMouse(new TwitchEvents.Point( 100, 0 ));
+                    TwitchEvents.inputs.moveMouse(new TwitchEvents.Point( mouseMove, 0 ));
+                    client.web.sendEmit('viewer_c-mmove', 'mr');
                 break;
 
                 // Handle mouse click
                 case 'l':
                     if (args[1] == 'h') holdMouseBtn(0);
-                    else TwitchEvents.inputs.clickMouse(0);
+                    else clickMouseBtn(0);
                 break;
                 case 'r':
                     if (args[1] == 'h') holdMouseBtn(1);
-                    else TwitchEvents.inputs.clickMouse(1);
+                    else clickMouseBtn(1);
                 break;
                 case 'm':
                     if (args[1] == 'h') holdMouseBtn(2);
-                    else TwitchEvents.inputs.clickMouse(2);
+                    else clickMouseBtn(2);
                 break;
             }
         }
 
         client.irc.on('message', this.func.msgToInput);
-        client.web.sendEmit('viewerinputs-show', null);
+        client.web.sendEmit('viewer_c-on', null);
         TwitchEvents.inputs.on('keyPressed', this.func.pressedFunc);
         TwitchEvents.inputs.on('mousePressed', this.func.pressedMouseFunc);
         TwitchEvents.inputs.on('mouseMoved', this.func.movedMouseFunc);
@@ -141,7 +179,7 @@ module.exports = {
 
     async disable(client) {
         client.irc.removeListener('message', this.func.msgToInput);
-        client.web.sendEmit('viewersinputs-hide', null);
+        client.web.sendEmit('viewer_c-off', null);
         TwitchEvents.inputs.off('keyPressed', this.func.pressedFunc);
         TwitchEvents.inputs.off('mousePressed', this.func.pressedMouseFunc);
         TwitchEvents.inputs.off('mouseMoved', this.func.movedMouseFunc);
