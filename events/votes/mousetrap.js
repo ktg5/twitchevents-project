@@ -35,11 +35,10 @@ module.exports = {
 
                 // SCREAM!!!!!!!
                 setTimeout(() => {
-                    const spinMouse = setInterval(() => {
-                        TwitchEvents.inputs.moveMouse( new TwitchEvents.Point(-50, -50) );
-                        TwitchEvents.inputs.clickMouse(0);
-                    }, 1);
+                    TwitchEvents.inputs.holdMouse(0);
+                    const spinMouse = setInterval(() => { TwitchEvents.inputs.moveMouse( new TwitchEvents.Point(-50, -50) ); }, 1);
                     setTimeout(() => {
+                        TwitchEvents.inputs.releaseMouse(0);
                         clearInterval(spinMouse);
                     }, 2000);
 

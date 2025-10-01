@@ -5,7 +5,7 @@ const { spawn } = require("child_process");
 var mutedInt;
 module.exports = {
     data: {
-        name: "muted",
+        name: "no-audio",
         desc: "Streamer no audio",
         type: TwitchEvents.Types.VOTE
     },

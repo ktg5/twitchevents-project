@@ -61,7 +61,6 @@ module.exports = {
         }
 
         function toggleKey(key) {
-            console.log(toggledKeys);
             // If key is already toggled, release it
             if (toggledKeys[key]) {
                 delete toggledKeys[key];
@@ -81,7 +80,7 @@ module.exports = {
             TwitchEvents.inputs.holdMouse(button);
             setTimeout(() => {
                 TwitchEvents.inputs.releaseMouse(button);
-            }, 10);
+            }, 15);
             client.web.sendEmit('viewer_c-release', { mouse: button })
         }
 
@@ -115,6 +114,9 @@ module.exports = {
                 case 'd':
                     pressKey(TwitchEvents.inputs.Keys.D);
                 break;
+                case 'q':
+                    pressKey(TwitchEvents.inputs.Keys.Q);
+                break;
                 case '1':
                     pressKey(TwitchEvents.inputs.Keys.Num1);
                 break;
@@ -138,19 +140,23 @@ module.exports = {
 
                 // Handle mouse movement
                 case 'mu':
-                    TwitchEvents.inputs.moveMouse(new TwitchEvents.Point( 0, -mouseMove ));
+                    fullMove = handleFullMove(args);
+                    TwitchEvents.inputs.moveMouse(new TwitchEvents.Point( 0, -fullMove ));
                     client.web.sendEmit('viewer_c-mmove', 'mu');
                 break;
                 case 'md':
-                    TwitchEvents.inputs.moveMouse(new TwitchEvents.Point( 0, mouseMove ));
+                    fullMove = handleFullMove(args);
+                    TwitchEvents.inputs.moveMouse(new TwitchEvents.Point( 0, fullMove ));
                     client.web.sendEmit('viewer_c-mmove', 'md');
                 break;
                 case 'ml':
-                    TwitchEvents.inputs.moveMouse(new TwitchEvents.Point( -mouseMove, 0 ));
+                    fullMove = handleFullMove(args);
+                    TwitchEvents.inputs.moveMouse(new TwitchEvents.Point( -fullMove, 0 ));
                     client.web.sendEmit('viewer_c-mmove', 'ml');
                 break;
                 case 'mr':
-                    TwitchEvents.inputs.moveMouse(new TwitchEvents.Point( mouseMove, 0 ));
+                    fullMove = handleFullMove(args);
+                    TwitchEvents.inputs.moveMouse(new TwitchEvents.Point( fullMove, 0 ));
                     client.web.sendEmit('viewer_c-mmove', 'mr');
                 break;
 
@@ -167,6 +173,12 @@ module.exports = {
                     if (args[1] == 'h') holdMouseBtn(2);
                     else clickMouseBtn(2);
                 break;
+            }
+
+
+            function handleFullMove(args) {
+                if (args[1] == "h") return fullMove = mouseMove * 3;
+                else return fullMove = mouseMove;
             }
         }
 

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <link rel="stylesheet" href="/events/viewer/style.css">
+
+        <script src="/modules/socket.io/client-dist/socket.io.js"></script>
+        <script type="module" src="/modules/howler/dist/howler.min.js"></script>
+        <script type="module" src="/modules/load-html/index.js"></script>
+
+
+        <style>
+            :root {
+                --fadeIn-animation: 250ms;
+            }
+        </style>
+    </head>
+
+
+    <body>
+        <div id="guess-container">
+            <div id="guess"></div>
+        </div>
+
+
+        <script>
+            var client;
+            setTimeout(() => {
+                // Start
+                client = window.parent.client;
+                socket = window.parent.socket;
+
+
+                // If client didn't init yet, reload everything 'cause FUCK YOU
+                if (!client) window.parent.location.reload();
+
+                
+                // Draw le board
+                function drawBoard(d) {
+                    
+                }
+
+
+                // Listenereseres
+                socket.on(`${client.user}@guess-start`, (d) => drawBoard({ ...d, firstTime: true }));
+            }, 250);
+        </script>
+    </body>
+</html>

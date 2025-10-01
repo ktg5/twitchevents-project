@@ -47,7 +47,11 @@ body {
     height: var(--input-group-height);
 }
 
-#key-indicator .input-group .key-container {display: flex;position: relative;justify-content: center;}
+#key-indicator .input-group .key-container {
+    display: flex;
+    position: relative;
+    justify-content: center;
+}
 
 #key-indicator .input-group .key {
     background: var(--key-normal-colour);
