@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
     <head>
-        <link rel="stylesheet" href="/events/viewer/style.css">
+        <link rel="stylesheet" href="/events/guess/style.css">
 
         <script src="/modules/socket.io/client-dist/socket.io.js"></script>
         <script type="module" src="/modules/howler/dist/howler.min.js"></script>
@@ -11,19 +11,72 @@
         <style>
             :root {
                 --fadeIn-animation: 250ms;
+                --inactive-charac-colour: #029ccc;
             }
         </style>
     </head>
 
 
     <body>
-        <div id="guess-container">
-            <div id="guess"></div>
+        <div id="guess-container" hide>
+            <div id="board">
+                <div id="characs"></div>
+            </div>
         </div>
 
 
         <script>
+            const boardLayout = [ 12, 14, 14, 12 ];
+            var maxLineOnBoard = 0;
+            boardLayout.forEach((line) => {
+                if (line > maxLineOnBoard) maxLineOnBoard = line;
+            });
+            function getMaxCharacs() {
+                let out = 0;
+                boardLayout.forEach((row) => {
+                    out = Number(out + row);
+                });
+                return out;
+            }
+            const maxCharacs = getMaxCharacs();
+
             var client;
+
+            const boardDiv = document.querySelector('#guess-container #board');
+            const characsDiv = boardDiv.querySelector('#characs');
+
+            const bodyStyle = window.getComputedStyle(document.body);
+            const animationTime = Number(bodyStyle.getPropertyValue('--fadeIn-animation').split('ms')[0]);
+
+            var waitingMusic;
+
+
+            // Set possible spots for chracters
+            boardLayout.forEach((row) => {
+                // Make row div for row
+                const rowDiv = document.createElement('div');
+                rowDiv.classList.add('row');
+                characsDiv.append(rowDiv);
+
+                for (let i = 0; i < row; i++) rowDiv.insertAdjacentHTML('beforeend', `
+                    <div class="charac-container">
+                        <div class="charac">w</div>
+                    </div>
+                `);
+            });
+
+
+            // Function for getting a div in a specific row & column
+            // Starts at 0
+            function getCharacDiv(row, col) {
+                const rowDiv = characsDiv.children[row];
+                if (!rowDiv) return null;
+                const exactDiv = rowDiv.children[col];
+                if (exactDiv) return exactDiv;
+                else return null;
+            }
+
+
             setTimeout(() => {
                 // Start
                 client = window.parent.client;
@@ -33,15 +86,172 @@
                 // If client didn't init yet, reload everything 'cause FUCK YOU
                 if (!client) window.parent.location.reload();
 
+
+                waitingMusic = new Howl({
+                    src: ['sfx/guess.mp3'],
+                    volume: 1,
+                    preload: true
+                });
+
+                var showCharacInt;
                 
-                // Draw le board
-                function drawBoard(d) {
-                    
+                // Put the phrase on the board
+                function setPhrase(d) {
+                    document.querySelector('#guess-container').removeAttribute('hide');
+
+                    setTimeout(() => {
+                        
+                        const lines = ['', d.phrase, '', ''];
+
+                        function moveLinesUp(lines) {
+                            for (let i = 0; i < lines.length - 1; i++) {
+                                lines[i] = lines[i + 1];
+                            }
+                            lines[lines.length - 1] = '';
+                        }
+
+                        // Loop 'til we have a completed the formating for the phrase
+                        while (true) {
+                            let linesShorter = true;
+                            for (let i = 0; i < lines.length; i++) {   
+                                // If the current line we're at is longer than the length
+                                // defined in the boardLayout at the same pos
+                                if (lines[i].length > boardLayout[i]) {
+                                    linesShorter = false;
+
+                                    // Split row by each space
+                                    const splitBySpaceLine = lines[i].split(' ');
+
+                                    // Check if next line will more than the lines length
+                                    if (i + 1 >= lines.length) {
+                                        moveLinesUp(lines);
+                                        i--;
+                                    }
+                                    
+                                    // Move last word from the current line into the next line
+                                    const lastWord = splitBySpaceLine[splitBySpaceLine.length - 1];
+                                    if (lines[i + 1].length === 0) lines[i + 1] = lastWord;
+                                    else lines[i + 1] = `${lastWord} ${lines[i + 1]}`;
+                                    // Remove lastWord from current row
+                                    lines[i] = lines[i].substring(0, lines[i].length - (lastWord.length + 1));
+                                    // lines[i] = lines[i].replace(` ${lastWord}`, '');
+                                }
+                            }
+
+                            if (linesShorter) break;
+                        }
+                        // Move lines up to the top if needed
+                        if (
+                            lines[0].length === 0
+                            && lines[lines.length - 1].length > 0
+                        ) moveLinesUp(lines);
+                        // Thank you dad for helping out with the code from the lines array to this comment.
+                        // console.log(lines);
+
+
+                        // Find which line has the most characters
+                        const longestLine = { pos: 0, count: 0 };
+                        for (let i = 0; i < lines.length; i++) {
+                            const line = lines[i];
+                            if (line.length > longestLine.count) {
+                                longestLine.pos = i;
+                                longestLine.count = line.length;
+                            }
+                        }
+                        
+                        // Characters that we should display first thing--no need to wait to show
+                        let specialCharacs = [`'`, '"', '~', '`', '/', '\\', '.', ',', '?', '!', '-', '_', '[', ']', '{', '}', '@', '&', '$', '#', '*', '(', ')'];
+                        // Length of how many characters that'll be active first thing
+                        let activeCharacs = '';
+                        
+                        // Render lines onto the board
+                        for (let i = 0; i < lines.length; i++) { // i is row
+                            const line = lines[i];
+                            const lineByCharac = line.split('');
+                            for (let j = 0; j < lineByCharac.length; j++) { // j is column
+                                const charac = lineByCharac[j];
+
+                                // If is a space, continue with the next one
+                                if (charac === ' ') continue;
+
+                                // Set column value using the current j & longestLine.count
+                                let colCalc = j + Math.round(((boardLayout[i] - longestLine.count) / 2) - .1);
+                                if (colCalc < 0) colCalc = 0;
+                                const characDiv = getCharacDiv(i, colCalc);
+                                // Check if charac is a specific character
+                                let isSpecial = false;
+                                specialCharacs.forEach((special) => {
+                                    if (special === charac) isSpecial = true;
+                                });
+                                
+                                
+                                if (!isSpecial) activeCharacs += charac;
+                                // Timeouot & display
+                                setTimeout(() => {
+                                    if (isSpecial) characDiv.setAttribute('show', '');
+                                    else characDiv.setAttribute('active', '');
+                                    characDiv.querySelector('.charac').innerHTML = charac;
+                                }, 50 * (i + j));
+                            }
+                        }
+
+
+                        // After the board is rendered & animation is done, do some more stuff
+                        setTimeout(() => {
+                            // Play sfx
+                            waitingMusic.play();
+
+
+                            // Display a character every so often, but not the whole thing
+                            const maxShowCharacs = Math.round(activeCharacs.length - (activeCharacs.length / 3));
+                            let i = 0;
+                            showCharacInt = setInterval(() => {
+                                if (i === maxShowCharacs) return clearInterval(showCharacInt);
+                                const activeCharacDivs = characsDiv.querySelectorAll('[active]');
+                                const random = Math.round(Math.random() * activeCharacDivs.length);
+                                var selectedActive = activeCharacDivs[random];
+                                if (!selectedActive) selectedActive = activeCharacDivs[activeCharacDivs.length / 2];
+                                selectedActive.removeAttribute('active');
+                                selectedActive.setAttribute('show', '');
+                                i++;
+                            }, 1750);
+                        }, 1500);
+
+                    }, animationTime);
                 }
 
 
                 // Listenereseres
-                socket.on(`${client.user}@guess-start`, (d) => drawBoard({ ...d, firstTime: true }));
+                socket.on(`${client.user}@guess-start`, (d) => setPhrase(d));
+                socket.on(`${client.user}@guess-hide`, () => {
+                    // Hide
+                    document.querySelector('#guess-container').setAttribute('hide', '');
+
+                    // Clear everything
+                    setTimeout(() => {
+                        const showingCharacs = characsDiv.querySelectorAll('[show]');
+                        showingCharacs.forEach((charac) => {
+                            charac.querySelector('.charac').innerHTML = 'w';
+                            charac.removeAttribute('show');
+                        });
+                    }, animationTime);
+                });
+                // Show all characs
+                function revealCharacs() {
+                    const activeCharacDivs = characsDiv.querySelectorAll('[active]');
+                    activeCharacDivs.forEach((actives) => {
+                        actives.removeAttribute('active');
+                        actives.setAttribute('show', '');
+                    });
+                }
+                socket.on(`${client.user}@guess-end`, () => revealCharacs());
+                socket.on(`${client.user}@guess-correct`, () => {
+                    // Show characs
+                    revealCharacs();
+
+                    // Stop music
+                    waitingMusic.stop();
+                });
             }, 250);
         </script>
     </body>

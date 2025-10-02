@@ -284,6 +284,12 @@ class Client {
         // Send client info on IO request
         this.#io.on('connection', (socket) => {
             socket.on('get-client', e => {
+                // Get event html dirs within `html/events`
+                const eventsDir = fs.readdirSync(path.join(__dirname, 'html/events'));
+                var eventHtmlDirs = [];
+                eventsDir.forEach((file) => { if (fs.lstatSync(path.join(__dirname, 'html/events/', file)).isDirectory) eventHtmlDirs.push(file); });
+
+                // Send to client
                 let tempInt = setInterval(() => {
                     if (addedEvents) {
                         clearInterval(tempInt);
@@ -293,7 +299,8 @@ class Client {
                             user: this.user,
                             poll: safePoll,
                             hermes: this.hermes,
-                            events: this.events
+                            events: this.events,
+                            eventHtmlDirs
                         });
                         // logger.info('TwitchEvents: Sent TwitchEvents Client info to web client.');
                     }
@@ -695,32 +702,26 @@ class Client {
                 ) throw new Error(`TwitchEvents: The event, "${eventName}", has the same name in it's "data" object--that being "${event.data.name}"--as a already existing event.`);
 
                 // Default data
+                this.eventTime
                 const eventData = {
                     data: event.data,
                     time: event.time ? event.time : undefined,
                     enable(client, forced) {
                         if (!client) throw new Error(noClientErr);
-                        // Check if the event is running/enabled at this time
-                        if (
-                            event.data.type === Types.VOTE
-                            || event.time
-                        ) {
+
+                        if (event.data.type === Types.VOTE) {
                             if (event.enabled) logger.error(`TwitchEvents: The event, "${eventName}" is already enabled. Disable it to enable it again.`);
-                            
+                            // Set time so that event can auto-disable
+                            this.time = client.eventTime;
                         }
 
                         event.enable(client);
-                        // Auto disable for redeems with the "time" value
-                        if (
-                            event.data.type === Types.REDEEM
-                            && event.time
-                        ) {
+                        // Auto disable for events with the "time" value
+                        if (event.time) {
                             // Throw error if the "time" value is set but no disable function is made
-                            if (
-                                event.time 
-                                && !event.disable
-                            ) throw new Error(`TwitchEvents: The event, "${eventName}" has a "time" value set, but doesn't have a "disable" function!`);
+                            if (!event.disable) throw new Error(`TwitchEvents: The event, "${eventName}" has a "time" value set, or is a "VOTE" type, but doesn't have a "disable" function!`);
 
+                            // Enable then disable after the given time
                             setTimeout(() => { this.disable(client); }, minsToMs(this.time));
                             logger.info(`TwitchEvents: Enabled "${eventName}" & disabling in ${this.time} minute(s)!`);
                         // Normal--just log we're enabling

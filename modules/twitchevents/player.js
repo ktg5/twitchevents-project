@@ -31,7 +31,6 @@ class Player {
     constructor(type, filePath, options) {
         this.filePath = path.resolve(filePath);
         this.id = this.#generateId();
-        this.duration = this.#getWavData();
         /**
          * @type {PlayerType}
          */
@@ -39,6 +38,8 @@ class Player {
         
         // Make sure sound is a wav
         if (path.extname(filePath) !== '.wav') throw new Error('TwitchEvents.Player: You must provide a .WAV file! No need to make it a big file either, change the quailty or somethin\'. And don\'t just change the god damn file extension!!!');
+        // Then get it's data
+        this.duration = this.#getWavData();
 
     
         switch (type) {

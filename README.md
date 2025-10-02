@@ -1,5 +1,5 @@
 # twitchevents-project
-Project for TwitchEvents
+This is probably one of my favorite projects I've made, aside from OldTwitch & my current website. Spent a lot of everything & used a lot of everything for this project--if I could somehow put everything I've typed out into a gallery, I would. So please, enjoy *TwitchEvents*.
 
 
 ## Download
@@ -25,8 +25,10 @@ This will install:
 
 I should've also noted above that you can remove or add/make your own events for the *twitchevents-project*. You can find all the events via the `events` folder within the project folder. So if you don't like one event, delete it!
 
-If you're going to use , **if you use a Voicemeeter output device as your default audio device**, you'll need to download [Frosthaven/voicemeeter-windows-volume](https://github.com/Frosthaven/voicemeeter-windows-volume/releases/latest) to get the Windows sound mixer to work with Voicemeeter. [**Please follow this guide if you have do idea what the hell this is**]() (which will be made soon)
+### Requirments for specific events:
+ - `votes/no-audio`: **If you use a Voicemeeter output device as your default audio device**, you'll need to download [Frosthaven/voicemeeter-windows-volume](https://github.com/Frosthaven/voicemeeter-windows-volume/releases/latest) to get the Windows sound mixer to work with Voicemeeter. [**Please follow this guide if you have do idea what the hell this is**]() (which will be made soon)
 
+## Setup Pt.2
 Once done, close your current terminal & press `Windows Key` & `R`. Then type `pwsh` to launch the version of PowerShell we just installed.
 
 Then `cd` into the *twitchevents-project* folder. To get to the folder of the *twitchevents-project* within PowerShell, select the folder of what you extracted within File Explorer, then hold `Shift` & `Right Mouse Button` and click on, `Copy as path` below the, `Send to` context-menu button. From there, you can type in PowerShell: `cd` and then right-click the PowerShell window to paste the folder path.

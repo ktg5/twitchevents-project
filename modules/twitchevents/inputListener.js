@@ -222,13 +222,15 @@ class InputListener extends EventTarget {
      * Type a key
      * Will send a emit to all events relating to keys
      * @param {Keys} key The key to press
+     * @param {Keys} modifer Modifer key to hold down with the `key`
      */
-    async typeKey(key) {
+    async typeKey(key, modifer) {
         const thisEventName = "keyTyped";
         this.#lastSyntheticEvent = { type: thisEventName, key, time: Date.now() };
 
-        await nut.keyboard.pressKey(key);
-        await nut.keyboard.releaseKey(key);
+        this.holdKey(key, modifer);
+        this.releaseKey(key, modifer);
+        
         this.#emit("keyPressed", { key, synthetic: true });
         this.#emit("keyReleased", { key, synthetic: true });
         this.#emit(thisEventName, { key, synthetic: true });
@@ -249,12 +251,14 @@ class InputListener extends EventTarget {
      * Hold a key
      * Will send a emit to "keyPressed"
      * @param {Keys} key The key to hold down
+     * @param {Keys} modifer Modifer key to hold down with the `key`
      */
-    async holdKey(key) {
+    async holdKey(key, modifer) {
         const thisEventName = "keyPressed";
         this.#lastSyntheticEvent = { type: thisEventName, key, time: Date.now() };
 
-        await nut.keyboard.pressKey(key);
+        if (modifer) nut.keyboard.pressKey(modifer, key);
+        else nut.keyboard.pressKey(key);
         this.#emit(thisEventName, { key, synthetic: true });
     }
 
@@ -262,12 +266,14 @@ class InputListener extends EventTarget {
      * Release a key
      * Will send a emit to "keyReleased"
      * @param {Keys} key The key to release
+     * @param {Keys} modifer Modifer key to hold down with the `key`
      */
-    async releaseKey(key) {
+    async releaseKey(key, modifer) {
         const thisEventName = "keyReleased";
         this.#lastSyntheticEvent = { type: thisEventName, key, time: Date.now() };
 
-        await nut.keyboard.releaseKey(key);
+        if (modifer) nut.keyboard.releaseKey(modifer, key);
+        else nut.keyboard.releaseKey(key);
         this.#emit(thisEventName, { key, synthetic: true });
     }
 

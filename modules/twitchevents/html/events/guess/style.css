@@ -5,6 +5,11 @@
     font-style: normal;
 }
 
+@font-face {
+    font-family: "Impact";
+    src: url(impact.ttf);
+}
+
 body {
     font-family: 'Montserrat';
     margin: 0 !important;
@@ -12,4 +17,78 @@ body {
 
 * {
     transition: opacity var(--fadeIn-animation);
+}
+
+[hide] {
+    opacity: 0;
+}
+
+
+#guess-container {
+    position: absolute;
+    width: fit-content;
+    bottom: 1vw;
+    left: 0;
+    right: 0;
+    margin: auto;
+}
+
+#guess-container #board {
+    position: relative;
+    background: black;
+    padding: 1vw;
+    width: 40vw;
+    height: 15vw;
+    align-content: center;
+}
+
+#board #characs {
+    justify-items: anchor-center;
+}
+
+#characs .row {
+    display: flex;
+}
+
+.row .charac-container {
+    font-family: "Impact";
+    background: var(--inactive-charac-colour);
+    font-size: 2.5vw;
+    padding: .15vw .25vw;
+    margin: .15vw;
+    min-width: 2.1vw;
+    justify-items: center;
+}
+
+.row .charac-container[active] {
+    animation: showActiveCharac var(--fadeIn-animation) linear;
+}
+
+.row .charac-container[active],
+.row .charac-container[show]
+{
+    background: #fff;
+}
+
+.charac-container .charac {
+    text-transform: uppercase;
+    width: fit-content;
+    opacity: 0;
+    transition: opacity 0s;
+}
+
+.charac-container[show] .charac {
+    opacity: 1;
+}
+
+
+@keyframes showActiveCharac {
+    0% {
+        background: var(--inactive-charac-colour);
+        transform: rotateY(360deg);
+    }
+    100% {
+        background: #fff;
+        transform: rotateY(0deg);
+    }
 }

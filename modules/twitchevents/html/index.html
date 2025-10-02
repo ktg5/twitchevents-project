@@ -27,7 +27,8 @@
                 <div class="time-bar" style="width: 100%;"></div>
             </div>
         </div>
-        <iframe class="module" src="/events/viewer/index.html"></iframe>
+        
+        <div id="modules"></div>
 
 
         <script>
@@ -93,6 +94,14 @@
                 // When the server sends us back our first init data
                 socket.on('got-client', (data) => {
                     client = data;
+
+
+                    // Set all event iframes with data.eventHtmlDirs
+                    data.eventHtmlDirs.forEach((eventHtml) => {
+                        document.querySelector('#modules').insertAdjacentHTML('afterbegin', `
+                            <iframe class="module" src="/events/${eventHtml}/index.html"></iframe>
+                        `);
+                    });
 
 
                     // Update poll information for client
