@@ -12,10 +12,9 @@ module.exports = {
 
 
     async enable(client) {
-        muteStreamer();
-        mutedInt = setInterval(() => {
-            muteStreamer();
-        }, 30000);
+        new TwitchEvents.Tts().say('imagine being able to hear');
+        setTimeout(() => muteStreamer(), 1000);
+        mutedInt = setInterval(() => muteStreamer(), 30000);
 
         function muteStreamer() {
             const proc = spawn("pwsh.exe", ["-NoProfile", '-Command', `
@@ -30,5 +29,6 @@ module.exports = {
         spawn("pwsh.exe", ["-NoProfile", '-Command', `
 & "${__dirname}\\lib\\nircmd.exe" mutesysvolume 0
         `]);
+        new TwitchEvents.Tts().say('hello is this thing on xd');
     }
 }

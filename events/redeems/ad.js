@@ -1,11 +1,11 @@
 const TwitchEvents = require(`../../modules/twitchevents`);
-const { AdsManager } = require('../../adsmanager');
+const { AdsManager } = require('../modules/adsmanager');
 
 
 module.exports = {
     data: {
         name: "ad",
-        reward: "Streamer watch ad!",
+        reward: "TE :: Streamer watch ad!",
         type: TwitchEvents.Types.REDEEM
     },
 

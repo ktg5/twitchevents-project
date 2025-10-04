@@ -29,6 +29,10 @@ class InputListener extends EventTarget {
      * @enum
      */
     MouseBtn = nut.Button;
+    #pressed = {
+        stat: false,
+        key: null
+    };
 
 
     constructor() {
@@ -65,15 +69,24 @@ class InputListener extends EventTarget {
         const gkmKeyEvent = gkm.events.on("key.*", (e) => {
             switch (gkmKeyEvent.event) {
                 case "key.pressed":
-                    this.#handleEvent("keyPressed", e)
+                    if (
+                        this.#pressed.stat === false
+                        || this.#pressed.key !== e[0]
+                    ) {
+                        this.#handleEvent("keyPressed", e);
+                        this.#pressed.stat = true;
+                        this.#pressed.key = e[0];
+                    }
                 break;
 
                 case "key.released":
-                    this.#handleEvent("keyReleased", e)
+                    this.#handleEvent("keyReleased", e);
+                    this.#pressed.stat = false;
+                    this.#pressed.key = null;
                 break;
 
                 case "key.typed":
-                    this.#handleEvent("keyTyped", e)
+                    this.#handleEvent("keyTyped", e);
                 break;
             }
         });
@@ -180,7 +193,6 @@ class InputListener extends EventTarget {
         let targetClick = this.#handleMouseButton(button);
 
         this.#lastSyntheticEvent = { type: thisEventName, targetClick, time: Date.now() };
-        console.log('click');
         await nut.mouse.click(targetClick);
         this.#emit("mousePressed", { 0: targetClick, synthetic: true });
         this.#emit("mouseReleased", { 0: targetClick, synthetic: true });

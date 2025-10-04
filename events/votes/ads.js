@@ -1,5 +1,5 @@
 const TwitchEvents = require(`../../modules/twitchevents`);
-const { AdsManager } = require('../../adsmanager');
+const { AdsManager } = require('../modules/adsmanager');
 
 
 const timeBeforeNew = 30; // seconds

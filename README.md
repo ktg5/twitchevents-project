@@ -25,8 +25,9 @@ This will install:
 
 I should've also noted above that you can remove or add/make your own events for the *twitchevents-project*. You can find all the events via the `events` folder within the project folder. So if you don't like one event, delete it!
 
-### Requirments for specific events:
+### Notes for specific events:
  - `votes/no-audio`: **If you use a Voicemeeter output device as your default audio device**, you'll need to download [Frosthaven/voicemeeter-windows-volume](https://github.com/Frosthaven/voicemeeter-windows-volume/releases/latest) to get the Windows sound mixer to work with Voicemeeter. [**Please follow this guide if you have do idea what the hell this is**]() (which will be made soon)
+ - `votes/funny-mic`, `votes/invert-mouse` & `votes/small-mouse`: These events only use the TwitchEvents.Tts class to tell the client/streamer to do whatever the event is. There is no actual code being executed. If you'd like to remove these--especially `small-mouse` since it's just for me kinda--you may.
 
 ## Setup Pt.2
 Once done, close your current terminal & press `Windows Key` & `R`. Then type `pwsh` to launch the version of PowerShell we just installed.

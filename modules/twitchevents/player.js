@@ -37,9 +37,12 @@ class Player {
         this.type = type;
         
         // Make sure sound is a wav
-        if (path.extname(filePath) !== '.wav') throw new Error('TwitchEvents.Player: You must provide a .WAV file! No need to make it a big file either, change the quailty or somethin\'. And don\'t just change the god damn file extension!!!');
+        if (
+            path.extname(filePath) !== '.wav'
+            && type === 'system'
+        ) throw new Error('TwitchEvents.Player: You must provide a .WAV file for the "system" type! No need to make it a big file either, change the quailty or somethin\'. And don\'t just change the god damn file extension!!!');
         // Then get it's data
-        this.duration = this.#getWavData();
+        if (type === 'system') this.duration = this.#getWavData();
 
     
         switch (type) {

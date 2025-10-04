@@ -12,10 +12,10 @@ module.exports = {
 
 
     async enable(client) {
-        
+        new TwitchEvents.Tts().say('streamer enable the small mouse');
     },
 
     async disable(client) {
-        
+        new TwitchEvents.Tts().say('streamer enable the fuck you mouse');
     }
 }

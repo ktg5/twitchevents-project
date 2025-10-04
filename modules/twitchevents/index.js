@@ -356,7 +356,7 @@ class Client {
         // Reward redeem event listener
         this.hermes.on('data', (d) => {
             if (d.type == "reward-redeemed") {
-                const foundEvent = this.events.redeems.find((r) => r.data.reward === d.data.redemption.reward.title);
+                const foundEvent = this.events.redeems.find((r) => r.data.reward.toLowerCase() === d.data.redemption.reward.title.toLowerCase());
                 // Enable the event
                 if (foundEvent) foundEvent.enable(this);
             }
@@ -426,7 +426,7 @@ class Client {
             // So yeah, it's the poll timeouot + time to vote. Event time doesn't account in here, but it can if you set the times correctly......................................................nerd...
             const timeCalc = minsToMs(this.poll.timeout) + minsToMs(this.poll.votingTime);
             this.poll.sets.interval = setInterval(async () => { await this.#pollStart(); }, timeCalc + (pollPickRandomTime * 2)); // The extra is added to be a "just in case" moment, if ya'know what I mean
-            logger.info(`TwitchEvents: Intervaling new polls every ${timeCalc / 60 / 1000} minute(s)...`);
+            logger.info(`TwitchEvents: Intervaling new polls every ${timeCalc / 60 / 1000} minute${((timeCalc / 60 / 1000) === 1) ? '' : 's'}...`);
         }
     }
 
@@ -514,7 +514,7 @@ class Client {
         this.poll.current.totalVotes = 0;
         this.poll.current.displayType = "VOTES";
         this.web.sendEmit(`poll-new`, this.poll.current);
-        logger.info(`TwitchEvents: Started a new poll! Closes in ${this.poll.current.time} minute(s)!`);
+        logger.info(`TwitchEvents: Started a new poll! Closes in ${this.poll.current.time} minute${(this.poll.current.time === 1) ? "" : "s"}!`);
 
 
         // Wait the poll time provided & end everything
@@ -723,7 +723,7 @@ class Client {
 
                             // Enable then disable after the given time
                             setTimeout(() => { this.disable(client); }, minsToMs(this.time));
-                            logger.info(`TwitchEvents: Enabled "${eventName}" & disabling in ${this.time} minute(s)!`);
+                            logger.info(`TwitchEvents: Enabled "${eventName}" & disabling in ${this.time} minute${(this.time === 1) ? "" : "s"}!`);
                         // Normal--just log we're enabling
                         } else logger.info(`TwitchEvents: Enabled "${eventName}"!`);
                     },
@@ -739,7 +739,7 @@ class Client {
                 switch (event.data.type) {
                     case Types.REDEEM:
                         if (!event.data.reward) throw new Error(`TwitchEvents: The event, "${eventName}", is a "REDEEM" type, but doesn't have the "reward" variable.`);
-                        if (this.#gqlUser.customRewards.find(r => r.title === event.data.reward) == undefined) logger.warn(`TwitchEvents: The Twitch reward named, "${event.data.reward}", wasn't found on the channel, "${this.#gqlUser.login}", for event file, "${eventName}".`);
+                        if (this.#gqlUser.customRewards.find(r => r.title.toLowerCase() === event.data.reward.toLowerCase()) == undefined) logger.warn(`TwitchEvents: The Twitch reward named, "${event.data.reward}", wasn't found on the channel, "${this.#gqlUser.login}", for event file, "${eventName}".`);
                         this.events.redeems.push(eventData);
                     break;
 

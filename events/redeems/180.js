@@ -5,7 +5,7 @@ module.exports = {
     data: {
         name: "180",
         type: TwitchEvents.Types.REDEEM,
-        reward: "Turn some!"
+        reward: "TE :: Turn some!"
     },
 
 

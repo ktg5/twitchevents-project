@@ -1,9 +1,9 @@
 {
-    "user": "ktg5_special",
+    "user": "ktg5_",
     "webPort": 6967,
     "eventTime": 3,
     "poll": {
-        "startOnInit": true,
+        "startOnInit": false,
         "disableOnInit": true,
         "votingTime": 1,
         "timeout": 3

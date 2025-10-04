@@ -12,10 +12,10 @@ module.exports = {
 
 
     async enable(client) {
-        
+        new TwitchEvents.Tts().say('streamer turn on your funny mic');
     },
 
     async disable(client) {
-        
+        new TwitchEvents.Tts().say('streamer say fuck you to funny mic');
     }
 }
