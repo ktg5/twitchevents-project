@@ -1,5 +1,5 @@
 const TwitchEvents = require(`../../modules/twitchevents`);
-const { AdsManager } = require('../modules/adsmanager');
+const { AdsManager } = require('../../modules/adsmanager');
 
 
 module.exports = {
