@@ -1,5 +1,9 @@
 # twitchevents-project
-This is probably one of my favorite projects I've made, aside from OldTwitch & my current website. Spent a lot of everything & used a lot of everything for this project--if I could somehow put everything I've typed out into a gallery, I would. So please, enjoy *TwitchEvents*.
+This is probably one of my favorite projects I've made, aside from OldTwitch & my current website. Spent a lot of everything & used a lot of everything for this project. If I could somehow put everything I've typed out into a gallery, I would. So please, enjoy *TwitchEvents*.
+
+
+## About TwitchEvents Itself
+TwitchEvents is a Node module made by myself to be a viewer-interaction "tool" (I suppose?) to work with any streamer & game that both use keyboard & mouse. 
 
 
 ## Download

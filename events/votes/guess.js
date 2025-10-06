@@ -21,7 +21,12 @@ const phrases = [
     "Sorry I Can Not Folfill This Request",
     "my name is jeff",
     "why are you running?",
-    "road work ahead? i sure hope it does"
+    "road work ahead? i sure hope it does",
+    "darksydephil",
+    "don't stop running little reddit",
+    "joe rogan",
+    "dude... fuck, yes.",
+    "i am fucked up"
 ];
 var lastPhrase = "";
 

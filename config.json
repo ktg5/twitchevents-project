@@ -3,8 +3,8 @@
     "webPort": 6967,
     "eventTime": 3,
     "poll": {
-        "startOnInit": true,
-        "disableOnInit": false,
+        "newOnInit": true,
+        "disableOnInit": true,
         "votingTime": 1,
         "timeout": 3
     }

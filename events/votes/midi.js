@@ -3,8 +3,9 @@ const fs = require('fs');
 
 
 const sfxFolder = `${__dirname}../../../assets/sfx/midi`;
-const minSpeedPitch = 0.5;
+const minSpeedPitch = 0.75;
 const maxSpeedPitch = 3;
+const dontEffectList = [ 'scream.mp3' ];
 var selectedAudio;
 module.exports = {
     data: {
@@ -20,8 +21,11 @@ module.exports = {
             var speedPitch = Math.random() * 3;
             if (speedPitch < minSpeedPitch) speedPitch = minSpeedPitch;
             if (speedPitch > maxSpeedPitch) speedPitch = maxSpeedPitch;
-            console.log(speedPitch);
-            new TwitchEvents.Player('ff', `${sfxFolder}/${selectedAudio}`, { speed: speedPitch, pitch: speedPitch });
+
+            // Check to see if current audio is in the dontEffectList
+            var dontEffect = false;
+            dontEffectList.forEach((sfx) => { if (sfx === selectedAudio) dontEffect = true; });
+            new TwitchEvents.Player('ff', `${sfxFolder}/${selectedAudio}`, dontEffect ? undefined : { speed: speedPitch, pitch: speedPitch });
         }
     },
 

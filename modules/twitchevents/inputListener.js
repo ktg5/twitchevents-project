@@ -1,5 +1,6 @@
 const nut = require("../ktg5-nutjs-fork/nut-js");
 const gkm = require("gkm");
+const keysEnum = require('./keyEnum');
 
 
 /**
@@ -19,12 +20,12 @@ class Point {
 class InputListener extends EventTarget {
     #eventTarget = new EventTarget();
     #listeners = new Map();
-    #lastSyntheticEvent = null;
+    #lastSyntheticEvent = {};
     lastMousePos = { x: 0, y: 0 };
     /**
      * @enum {nut.Key}
      */
-    Keys = nut.Key;
+    Keys = keysEnum.Keys;
     /**
      * @enum
      */
@@ -33,6 +34,8 @@ class InputListener extends EventTarget {
         stat: false,
         key: null
     };
+    getKeyCharByCode = keysEnum.getKeyCharByCode;
+    getKeyCodeByString = keysEnum.getKeyCodeByString;
 
 
     constructor() {
@@ -96,14 +99,40 @@ class InputListener extends EventTarget {
     // Mostly for the gkm events
     #handleEvent(type, e) {
         // Ignore if it matches last synthetic event
-        if (this.#lastSyntheticEvent &&
-            this.#lastSyntheticEvent.type === type &&
-            this.#lastSyntheticEvent.key === e.key &&
-            Date.now() - this.#lastSyntheticEvent.time < 80 // small window
+        if (
+            this.#lastSyntheticEvent[type] !== undefined &&
+            (Date.now() - this.#lastSyntheticEvent[type].time) < 80
+        ) if (
+            // Mouse & keyboard inputs
+            (
+                e[0]
+                && this.#lastSyntheticEvent[type][0] === e[0]
+            )
+            // Mouse positions
+            || (
+                e.x && e.y
+                && this.#lastSyntheticEvent[type].x === e.x
+                && this.#lastSyntheticEvent[type].y === e.y
+            )
         ) return;
+        else return;
+
+        // Debug logging stuff
+        // if (this.#lastSyntheticEvent[type]) {
+        //     console.log('l: ', this.#lastSyntheticEvent[type])
+        //     console.log('e: ', e);
+        // }
 
         // Otherwise, emit as usual
         this.#emit(type, { ...e, synthetic: false });
+    }
+
+    /**
+     * @param {string} type 
+     * @param {any} d
+     */
+    #setSyntheticEvent(type, d) {
+        this.#lastSyntheticEvent[type] = { ...d, time: Date.now() };
     }
 
 
@@ -119,7 +148,7 @@ class InputListener extends EventTarget {
         const deltaY = point.y - this.lastMousePos.y;
         const returnData = { x: point.x, y: point.y, deltaX, deltaY, synthetic: true };
 
-        this.#lastSyntheticEvent = { type: thisEventName, returnData, time: Date.now() };
+        this.#setSyntheticEvent(thisEventName, returnData);
         await nut.mouse.move(point);
         this.lastMousePos = { x: point.x, y: point.y };
 
@@ -140,7 +169,7 @@ class InputListener extends EventTarget {
         const fullY = mousePos.y + point.y;
         const returnData = { x: fullX, y: fullY, deltaX, deltaY, synthetic: true };
 
-        this.#lastSyntheticEvent = { type: thisEventName, returnData, time: Date.now() };
+        this.#setSyntheticEvent(thisEventName, returnData);
         await nut.mouse.move(point, true);
         this.lastMousePos = { x: fullX, y: fullY };
         
@@ -192,7 +221,7 @@ class InputListener extends EventTarget {
 
         let targetClick = this.#handleMouseButton(button);
 
-        this.#lastSyntheticEvent = { type: thisEventName, targetClick, time: Date.now() };
+        this.#setSyntheticEvent(thisEventName, { 0: targetClick });
         await nut.mouse.click(targetClick);
         this.#emit("mousePressed", { 0: targetClick, synthetic: true });
         this.#emit("mouseReleased", { 0: targetClick, synthetic: true });
@@ -209,7 +238,7 @@ class InputListener extends EventTarget {
 
         let targetClick = this.#handleMouseButton(button);
 
-        this.#lastSyntheticEvent = { type: thisEventName, targetClick, time: Date.now() };
+        this.#setSyntheticEvent(thisEventName, { 0: targetClick });
         await nut.mouse.pressButton(targetClick);
         this.#emit(thisEventName, { 0: targetClick, synthetic: true });
     }
@@ -224,7 +253,7 @@ class InputListener extends EventTarget {
 
         let targetClick = this.#handleMouseButton(button);
 
-        this.#lastSyntheticEvent = { type: thisEventName, targetClick, time: Date.now() };
+        this.#setSyntheticEvent(thisEventName, { 0: targetClick });
         await nut.mouse.releaseButton(targetClick);
         this.#emit(thisEventName, { 0: targetClick, synthetic: true });
     }
@@ -238,26 +267,12 @@ class InputListener extends EventTarget {
      */
     async typeKey(key, modifer) {
         const thisEventName = "keyTyped";
-        this.#lastSyntheticEvent = { type: thisEventName, key, time: Date.now() };
+        this.#setSyntheticEvent(thisEventName, { 0: this.getKeyCharByCode(key) });
 
         this.holdKey(key, modifer);
         this.releaseKey(key, modifer);
-        
-        this.#emit("keyPressed", { key, synthetic: true });
-        this.#emit("keyReleased", { key, synthetic: true });
-        this.#emit(thisEventName, { key, synthetic: true });
+        this.#emit(thisEventName, { 0: this.getKeyCharByCode(key), synthetic: true });
     }
-
-    // /**
-    //  * Types out the given string one key at a time.
-    //  * Will send a emit to all events relating to keys for each button
-    //  * @param {string} string
-    //  * @example
-    //  * await InputListener.typeString("Hello World!");
-    //  */
-    // async typeString(string) {
-    //     for (const char of string) await this.typeKey(Key[char] || char);
-    // }
 
     /**
      * Hold a key
@@ -267,11 +282,11 @@ class InputListener extends EventTarget {
      */
     async holdKey(key, modifer) {
         const thisEventName = "keyPressed";
-        this.#lastSyntheticEvent = { type: thisEventName, key, time: Date.now() };
+        setTimeout(() => this.#setSyntheticEvent(thisEventName, { 0: this.getKeyCharByCode(key) }), 300);
 
         if (modifer) nut.keyboard.pressKey(modifer, key);
         else nut.keyboard.pressKey(key);
-        this.#emit(thisEventName, { key, synthetic: true });
+        this.#emit(thisEventName, { 0: this.getKeyCharByCode(key), synthetic: true });
     }
 
     /**
@@ -282,11 +297,11 @@ class InputListener extends EventTarget {
      */
     async releaseKey(key, modifer) {
         const thisEventName = "keyReleased";
-        this.#lastSyntheticEvent = { type: thisEventName, key, time: Date.now() };
+        this.#setSyntheticEvent(thisEventName, { 0: this.getKeyCharByCode(key) });
 
         if (modifer) nut.keyboard.releaseKey(modifer, key);
         else nut.keyboard.releaseKey(key);
-        this.#emit(thisEventName, { key, synthetic: true });
+        this.#emit(thisEventName, { 0: this.getKeyCharByCode(key), synthetic: true });
     }
 
 

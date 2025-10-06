@@ -26,7 +26,7 @@ if (process.stdin.isTTY) process.stdin.setRawMode(true);
 
 /**
  * @typedef {{
- *      startOnInit: boolean | null,
+ *      newOnInit: boolean | null,
  *      disableOnInit: boolean | null,
  *      votingTime: number,
  *      timeout: number,
@@ -102,41 +102,6 @@ if (process.stdin.isTTY) process.stdin.setRawMode(true);
 
 // Basic functions
 function minsToMs(number = 0) { return number * 60 * 1000 };
-/**
- * Gets the different between the current date & date provided
- * @param {Date} date 
- * @returns {string} String of amount of days, hours, minutes or seconds are left
- */
-function calcDateDiffToTxt(date) {
-    let txt;
-    let diffMs = date - currentDate;
-    let diffSeconds = diffMs / 1000;
-    let diffMinutes = diffSeconds / 60;
-    let diffHours = diffMinutes / 60;
-    let diffDays = diffHours / 24;
-
-    switch (true) {
-        case diffDays >= 1:
-            let calcHours = diffHours.toFixed(0) - (diffDays.toFixed(0) * 24);
-            txt = `${diffDays.toFixed(0)} day${diffDays.toFixed(0) == 1 ? "" : "s"}`;
-        break;
-
-        case diffHours >= 1:
-            let calcMins = diffMinutes.toFixed(0) - (diffHours.toFixed(0) * 60);
-            txt = `${diffHours.toFixed(0)} hour${diffHours.toFixed(0) == 1 ? "" : "s"}`;
-        break;
-
-        case diffMinutes >= 1:
-            txt = `${diffMinutes.toFixed(0)} minute${diffMinutes.toFixed(0) == 1 ? "" : "s"}`;
-        break;
-
-        case diffSeconds >= 1:
-            txt = `${diffSeconds.toFixed(0)} second${diffSeconds.toFixed(0) == 1 ? "" : "s"}`;
-        break;
-    }
-
-    return txt;
-};
 
 
 // Other
@@ -319,7 +284,7 @@ class Client {
      *      user: string,
      *      eventTime: number,
      *      poll: {
-     *          startOnInit: boolean,
+     *          newOnInit: boolean,
      *          time: number
      *      }
      * }} data - Data related to the user and poll configuration.
@@ -379,7 +344,6 @@ class Client {
         // setTimeout(e => { this.#pollStart(); }, 1000);
         // DEFAULT:
         if (!this.poll.disableOnInit && this.poll.disableOnInit !== true) this.#togglePollInt();
-        if (this.poll.startOnInit === true) setTimeout(() => { this.#pollStart(); }, 1000);
 
 
         // Set the events object
@@ -427,6 +391,9 @@ class Client {
             const timeCalc = minsToMs(this.poll.timeout) + minsToMs(this.poll.votingTime);
             this.poll.sets.interval = setInterval(async () => { await this.#pollStart(); }, timeCalc + (pollPickRandomTime * 2)); // The extra is added to be a "just in case" moment, if ya'know what I mean
             logger.info(`TwitchEvents: Intervaling new polls every ${timeCalc / 60 / 1000} minute${((timeCalc / 60 / 1000) === 1) ? '' : 's'}...`);
+
+            // If user config said to make new poll on init
+            if (this.poll.newOnInit === true) setTimeout(() => { this.#pollStart(); }, 1000);
         }
     }
 
@@ -773,6 +740,7 @@ class Client {
      */
     getEvent(string) {
         var foundEvent = null;
+        if (!this.events) return;
         const votesSearch = this.events.votes.find(v => v.data.name === string);
         const redeemsSearch = this.events.redeems.find(v => v.data.name === string);
 

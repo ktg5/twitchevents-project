@@ -19,7 +19,7 @@ client.on('init', async () => {
     ]);
 
     setTimeout(() => {
-        new TwitchEvents.Tts().say('I used to be crazy once. I was in a room. A room full of CHATTERS. And that makes me lose my shit.');
+        // new TwitchEvents.Tts().say('I used to be crazy once. I was in a room. A room full of CHATTERS. And that makes me lose my shit.');
     }, 1000);
 });
 

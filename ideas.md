@@ -8,11 +8,9 @@ __these were finished when writing this file up__
 
 
 __working on__
- - make streamer solve a captcha
 
 
 __ideas__
- - change the brightness of my monitor every 30 seconds to something random
 
 
 __things that i can't so much do with commands or code__ like:

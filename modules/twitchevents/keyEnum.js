@@ -143,7 +143,11 @@ for (const [key, value] of Object.entries(Keys)) {
 }
 
 
-function getKeyChar(code) {
+/**
+ * @param {number} code 
+ * @returns {string}
+ */
+function getKeyCharByCode(code) {
     const name = Keys[code];
     const map = {
         Num0: "0",
@@ -201,3 +205,65 @@ function getKeyChar(code) {
 
     return map[name];
 }
+
+/**
+ * @param {string} string 
+ * @returns {number}
+ */
+function getKeyCodeByString(string) {
+    const map = {
+        "0": "Num0",
+        "1": "Num1",
+        "2": "Num2",
+        "3": "Num3",
+        "4": "Num4",
+        "5": "Num5",
+        "6": "Num6",
+        "7": "Num7",
+        "8": "Num8",
+        "9": "Num9",
+        "Q": "Q",
+        "W": "W",
+        "E": "E",
+        "R": "R",
+        "T": "T",
+        "Y": "Y",
+        "U": "U",
+        "I": "I",
+        "O": "O",
+        "P": "P",
+        "A": "A",
+        "S": "S",
+        "D": "D",
+        "F": "F",
+        "G": "G",
+        "H": "H",
+        "J": "J",
+        "K": "K",
+        "L": "L",
+        "Z": "Z",
+        "X": "X",
+        "C": "C",
+        "V": "V",
+        "B": "B",
+        "N": "N",
+        "M": "M",
+        "-": "Minus",
+        "=": "Equal",
+        ",": "Comma",
+        ".": "Period",
+        "/": "Slash",
+        ";": "Semicolon",
+        "'": "Quote",
+        "\\": "Backslash",
+        "`": "Grave",
+        " ": "Space"
+    };
+
+    const keyName = map[string];
+    if (!keyName) return undefined;
+    return Keys[keyName];
+}
+
+
+module.exports = { Keys, getKeyCharByCode, getKeyCodeByString };
