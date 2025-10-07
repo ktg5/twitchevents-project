@@ -60,7 +60,11 @@ module.exports = {
 
     async enable(client) {
         this.func.onPressed = (d) => {
-            if (d[0] == "1") {
+            console.log(d);
+            if (
+                d[0] == '1'
+                || d[0] == '2'
+            ) {
                 isLmbDown = true;
                 setTimeout(() => {
                     if (isLmbDown) this.func.startShake();
@@ -69,7 +73,10 @@ module.exports = {
         }
         this.func.onRelease = (d) => {
             if (
-                d[0] == "1"
+                (
+                    d[0] == '1'
+                    || d[0] == '2'
+                )
                 && isLmbDown
             ) {
                 isLmbDown = false;

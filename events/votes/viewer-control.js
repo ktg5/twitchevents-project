@@ -1,7 +1,10 @@
 const TwitchEvents = require(`../../modules/twitchevents`);
 
 
-const holdKeyTime = 1000;
+const holdKeyTime = {
+    normal: 250,
+    h: 1000
+};
 const holdMouseTime = 1000;
 var toggledKeys = {};
 
@@ -52,13 +55,13 @@ module.exports = {
 
 
     async enable(client) {
-        function pressKey(key) {
+        function pressKey(key, h) {
             TwitchEvents.inputs.holdKey(key);
             client.web.sendEmit('viewer_c-press', { key: key });
             setTimeout(() => {
                 TwitchEvents.inputs.releaseKey(key);
                 client.web.sendEmit('viewer_c-release', { key: key });
-            }, holdKeyTime);
+            }, h && h === true ? holdKeyTime.h : holdKeyTime.normal);
         }
 
         function toggleKey(key) {
@@ -99,36 +102,27 @@ module.exports = {
         this.func.msgToInput = (channel, tags, message) => {
             // Split message into args
             const args = message.split(' ');
+            const ifH = args[1] && args[1].toLowerCase() === 'h' ? true : false;
 
             // console.log(args[0]);
             switch (args[0].toLowerCase()) {
                 // Handle keys
                 case 'w':
-                    pressKey(TwitchEvents.inputs.Keys.W);
-                break;
                 case 'a':
-                    pressKey(TwitchEvents.inputs.Keys.A);
-                break;
                 case 's':
-                    pressKey(TwitchEvents.inputs.Keys.S);
-                break;
                 case 'd':
-                    pressKey(TwitchEvents.inputs.Keys.D);
-                break;
                 case 'q':
-                    pressKey(TwitchEvents.inputs.Keys.Q);
-                break;
                 case '1':
-                    pressKey(TwitchEvents.inputs.Keys.Num1);
-                break;
                 case '2':
-                    pressKey(TwitchEvents.inputs.Keys.Num2);
-                break;
                 case '3':
-                    pressKey(TwitchEvents.inputs.Keys.Num3);
-                break;
                 case '4':
-                    pressKey(TwitchEvents.inputs.Keys.Num4);
+                    // console.log(args[0], ': ', TwitchEvents.inputs.getKeyCodeByString(args[0]));
+                    pressKey(TwitchEvents.inputs.getKeyCodeByString(args[0]), ifH);
+                break;
+
+                case 'space':
+                case 'jump':
+                    pressKey(TwitchEvents.inputs.Keys.Space, ifH);
                 break;
 
                 // Keys to only be held
@@ -163,15 +157,15 @@ module.exports = {
 
                 // Handle mouse click
                 case 'l':
-                    if (args[1] == 'h') holdMouseBtn(0);
+                    if (ifH) holdMouseBtn(0);
                     else clickMouseBtn(0);
                 break;
                 case 'r':
-                    if (args[1] == 'h') holdMouseBtn(1);
+                    if (ifH) holdMouseBtn(1);
                     else clickMouseBtn(1);
                 break;
                 case 'm':
-                    if (args[1] == 'h') holdMouseBtn(2);
+                    if (ifH) holdMouseBtn(2);
                     else clickMouseBtn(2);
                 break;
             }

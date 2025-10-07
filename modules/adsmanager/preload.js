@@ -5,6 +5,9 @@ const ffmpeg = require('fluent-ffmpeg');
 
 window.addEventListener('DOMContentLoaded', async () => {
     try {
+        ipcRenderer.send('proc-focus');
+
+
         const videoEl = document.querySelector('#video video');
         const closeBtn = document.querySelector('#close-btn');
         if (!videoEl) throw new Error("Video element not found");

@@ -37,17 +37,19 @@ body {
     position: relative;
     background: black;
     padding: 1vw;
-    width: 40vw;
+    width: 41vw;
     height: 15vw;
     align-content: center;
 }
 
 #board #characs {
-    justify-items: anchor-center;
+    width: fit-content;
 }
 
 #characs .row {
     display: flex;
+    width: fit-content;
+    margin: auto;
 }
 
 .row .charac-container {
@@ -75,6 +77,7 @@ body {
     width: fit-content;
     opacity: 0;
     transition: opacity 0s;
+    margin: auto;
 }
 
 .charac-container[show] .charac {

@@ -6,6 +6,6 @@
         "newOnInit": true,
         "disableOnInit": true,
         "votingTime": 1,
-        "timeout": 3
+        "timeout": 4
     }
 }

@@ -39,10 +39,9 @@ module.exports = {
                 keyCode: TwitchEvents.inputs.getKeyCodeByString(d[0]),
                 heldFor: 0,
                 int: setInterval(() => {
-                    if (!item) return;
-
                     const item = dupKeyList[d[0]];
                     if (item) item.heldFor++;
+                    else return;
                 }, inputIntCount)
             }
         },
@@ -71,6 +70,7 @@ module.exports = {
 
                 // Then release the input for the time heldfor * inputIntCount
                 dupKeyList[d[0]].timeout = setTimeout(() => {
+                    if (!dupKeyList[d[0]]) return;
                     TwitchEvents.inputs.releaseKey(dupKeyList[d[0]].keyCode);
                     delete dupKeyList[d[0]];
                 }, dupKeyList[d[0]].heldFor * inputIntCount);

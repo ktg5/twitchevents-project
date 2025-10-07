@@ -15,7 +15,7 @@
                 --key-pressed-colour: #1b75e3;
                 --key-pressed-shadow: inset 0 0 0.35vw 0.35vw var(--key-normal-colour);
 
-                --input-group-height: 14vw;
+                --input-group-height: 19vw;
                 --min-key-size: 3vw;
                 --key-spacing: .2vw;
                 /*
@@ -23,6 +23,9 @@
                 avgKeySize + (modifierKeySize * (keyPos.y - 1))
                 */
                 --modifier-key-size: 1vw;
+
+                --mouse-width: 6vw;
+                --mouse-height: 8vw;
             }
 
 
@@ -34,17 +37,11 @@
 
             /* Width for keyboard input */
             #key-indicator .input-group#keys {
-                width: 18vw;
+                width: 24vw;
             }
             /* Width for mouse input */
             #key-indicator .input-group#mouse {
                 width: 14vw;
-            }
-
-            /* Size for mouse base */
-            #key-indicator .input-group#mouse .key-container {
-                width: 6vw;
-                height: 8vw;
             }
         </style>
     </head>
@@ -143,6 +140,12 @@
                 const startingCol = 1;
                 const keysList = [
                     {
+                        key: 'Escape',
+                        displayKey: 'Esc',
+                        row: 0,
+                        col: 0
+                    },
+                    {
                         key: 1,
                         row: 1,
                         col: 1,
@@ -161,6 +164,11 @@
                         key: 4,
                         row: 4,
                         col: 1
+                    },
+                    {
+                        key: 'Tab',
+                        row: 0,
+                        col: 2
                     },
                     {
                         key: 'W',
@@ -192,6 +200,24 @@
                         row: 3,
                         col: 4
                     },
+                    // {
+                    //     key: 'LeftCtrl',
+                    //     displayKey: 'Ctrl',
+                    //     row: 0,
+                    //     col: 5
+                    // },
+                    // {
+                    //     key: 'LeftSuper',
+                    //     displayKey: 'Super',
+                    //     row: 1,
+                    //     col: 5
+                    // },
+                    {
+                        key: 'Space',
+                        displayKey: 'Space/jump',
+                        row: 3,
+                        col: 5
+                    },
                 ];
                 keysList.forEach((key) => {
                     keysDiv.insertAdjacentHTML('beforeend', formatKey(key));
@@ -210,12 +236,23 @@
                     // Get pos attr.
                     const keyPos = { x: Number(keyDiv.getAttribute('pos').split(',')[0]), y: Number(keyDiv.getAttribute('pos').split(',')[1]) };
                     // Move div to our keyPos points + (modifierKeySize * y)
-                    const calcPos = { x: (avgKeySize * keyPos.x), y: (avgKeySize * (keyPos.y - startingCol)) };
+                    const calcPos = { x: (avgKeySize * keyPos.x), y: (avgKeySize * ((keyPos.y + 1) - startingCol)) };
+
+                    // Modifier stuff
                     // See if col has a modifier key (tab, caps, shift)
-                    /// 
                     if (keyPos.y > 1 && keyPos.x == 0) keyDiv.style.width = `${avgKeySize + (modifierKeySize * (keyPos.y - 1))}vw`;
                     /// Isn't a modifier
                     else if (keyPos.y > 1) calcPos.x = calcPos.x + (modifierKeySize * (keyPos.y - 1));
+                    // If the modifier is in the last y (5) do different things
+                    if (keyPos.y == 5) {
+                        /// Space/jump
+                        if (keyPos.x == 3) keyDiv.style.width = `${avgKeySize + (modifierKeySize * 6)}vw`;
+                        else {
+                            calcPos.x = (avgKeySize + (modifierKeySize / .8)) * keyPos.x;
+                            keyDiv.style.width = `${avgKeySize + modifierKeySize}vw`;
+                        }
+                    }
+
                     // Set
                     keyDiv.style.left = `${calcPos.x}vw`;
                     keyDiv.style.top = `${calcPos.y}vw`;

@@ -43,6 +43,10 @@ if (process.stdin.isTTY) process.stdin.setRawMode(true);
  *      sets: {
  *          interval: interval
  *          endTimeout: timeout
+ *      },
+ *      prev: {
+ *          options: VoteEvent[],
+ *          winningOption: VoteEvent
  *      }
  *  }} PollData
  */
@@ -264,7 +268,6 @@ class Client {
                             user: this.user,
                             poll: safePoll,
                             hermes: this.hermes,
-                            events: this.events,
                             eventHtmlDirs
                         });
                         // logger.info('TwitchEvents: Sent TwitchEvents Client info to web client.');
@@ -453,11 +456,9 @@ class Client {
              */
             function isInLast(client, evt) {
                 let attempts = 0;
-            
-                if (client.poll.prev) while (attempts < 10) {
-                    const isDuplicate = client.poll.prev.options.some(
-                        lastEvt => JSON.stringify(evt) === JSON.stringify(lastEvt)
-                    );
+                if (client.poll.prev) while (attempts < 20) {
+                    var isDuplicate = false;
+                    client.poll.prev.options.forEach((prevEvent) => { if (prevEvent.data.name === evt.data.name) return isDuplicate = true; });
                     if (!isDuplicate) break;
             
                     // Pick a new one
@@ -583,6 +584,7 @@ class Client {
              * @param {Client} client 
              */
             function end(client) {
+                if (!client.poll.current || !client.poll.current.winningOption) return;
                 // Send emits
                 client.web.sendEmit(`poll-end`, client.poll.current);
 
@@ -681,10 +683,9 @@ class Client {
                             // Set time so that event can auto-disable
                             this.time = client.eventTime;
                         }
-
-                        event.enable(client);
+                        
                         // Auto disable for events with the "time" value
-                        if (event.time) {
+                        if (this.time) {
                             // Throw error if the "time" value is set but no disable function is made
                             if (!event.disable) throw new Error(`TwitchEvents: The event, "${eventName}" has a "time" value set, or is a "VOTE" type, but doesn't have a "disable" function!`);
 
@@ -693,6 +694,8 @@ class Client {
                             logger.info(`TwitchEvents: Enabled "${eventName}" & disabling in ${this.time} minute${(this.time === 1) ? "" : "s"}!`);
                         // Normal--just log we're enabling
                         } else logger.info(`TwitchEvents: Enabled "${eventName}"!`);
+
+                        event.enable(client);
                     },
                     disable(client) {
                         if (!client) throw new Error(noClientErr);

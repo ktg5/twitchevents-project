@@ -211,6 +211,7 @@ function getKeyCharByCode(code) {
  * @returns {number}
  */
 function getKeyCodeByString(string) {
+    string = string.toUpperCase();
     const map = {
         "0": "Num0",
         "1": "Num1",

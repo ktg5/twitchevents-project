@@ -5,36 +5,57 @@
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 
-let mainWindow;
 
+let win;
 function createWindow() {
-    mainWindow = new BrowserWindow({
+    // Init
+    win = new BrowserWindow({
         width: 1270,
         height: 720,
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             nodeIntegration: true,
             contextIsolation: true,
-        }
+        },
+        fullscreen: false,
+        frame: false,
+        resizable: false,
+        alwaysOnTop: false,
     });
 
-    mainWindow.setFullScreen(true);
-    mainWindow.setMenuBarVisibility(false);
-    mainWindow.loadFile('index.html');
+    // Settings
+    win.loadFile('index.html');
 
-    mainWindow.on('minimize', (e) => e.preventDefault());
-    mainWindow.on('close', (e) => {
+    // Events
+    win.on('minimize', (e) => e.preventDefault());
+    win.on('close', (e) => {
         if (!app.isQuitting) e.preventDefault();
     });
+    win.once('ready-to-show', () => {
+        win.show();
+        win.focus();
+    });
 }
-
 app.whenReady().then(createWindow);
+
+
+// Extra ipc listener for focusing
+ipcMain.on('proc-focus', () => {
+    if (!win) return;
+    if (win.isMinimized()) win.restore();
+
+    win.show();
+    win.focus();
+
+    win.setAlwaysOnTop(true, 'screen-saver');
+    win.setFullScreen(true);
+});
 
 
 // Quit Electron when video ends
 ipcMain.on('video-ended', () => {
     console.log('Video ended, quitting Electron...');
     app.isQuitting = true;
-    mainWindow.close();
+    win.close();
     app.quit();
 });

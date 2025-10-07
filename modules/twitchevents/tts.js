@@ -7,7 +7,7 @@ class Tts {
 
     /**
      * Say a line using Windows' built-in `SpeechSynthesizer`
-     * @param {number} speed - The multiplier to add to the speech speed (min: `-10`, max: `10`)
+     * @param {number} [speed] - The multiplier to add to the speech speed (min: `-10`, max: `10`)
      */
     constructor(speed) {
         this.#proc = spawn("pwsh.exe", ["-NoProfile"]);
@@ -48,6 +48,7 @@ class Tts {
     }
 
     /**
+     * Say a line a string. Which in return, will kill the process.
      * @param {number} speed - The multiplier to add to the speech speed (min: `-10`, max: `10`)
      * @returns {void}
      */
@@ -63,7 +64,7 @@ class Tts {
             const cmd = `$global:speak.Speak("${string
                 .replaceAll(/"/g, '""')
                 .replaceAll("$", " dollar ")
-            }")`;
+            }")\nexit`;
             this.#sendCommand(cmd);
         });
     }
