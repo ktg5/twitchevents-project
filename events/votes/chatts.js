@@ -35,7 +35,7 @@ module.exports = {
             // Say tts message & add process
             var ttsSpeed = Math.round(Math.random() * 10);
             if (ttsSpeed < 1) ttsSpeed = 1;
-            console.log('ttsSpeed', ttsSpeed);
+            // console.log('ttsSpeed', ttsSpeed);
             const ttsProc = new TwitchEvents.Tts(ttsSpeed);
             ttsProc.say(`${tags['username']} said: ${message}`);
             ttsProcesses.push(ttsProc);

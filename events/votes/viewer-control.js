@@ -45,7 +45,6 @@ module.exports = {
 
         // If the mouse moved, try to do something do make the user not move
         async movedMouseFunc(d) {
-            // console.log('movedMouseFunc:', d);
             if (d.synthetic) return;
             TwitchEvents.inputs.moveMouse(new TwitchEvents.Point( 300, 300 ));
             nonoSfx.play();
