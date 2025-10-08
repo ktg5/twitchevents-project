@@ -38,54 +38,9 @@
             const animationTime = Number(window.getComputedStyle(document.body).getPropertyValue('--fadeIn-animation').split('ms')[0]);
 
 
-            var sfxs = {};
-            const pollRandomsLength = 8;
-            let currentRandom = 1;
-            function playSfx(type) {
-                // Random pick
-                if (type == "poll-random") {
-                    if (currentRandom > pollRandomsLength) currentRandom = 1;
-                    const calc = pollRandomsLength - currentRandom;
-                    sfxs[type][calc].play();
-                    currentRandom++;
-                    return;
-                }
-                // Default
-                if (sfxs[type]) sfxs[type].play();
-                else console.error(`couldn't find the sfx type under "${type}"`);
-            }
-
-
             var client;
             var socket = io();
             socket.on('connect', () => {
-                sfxs = {
-                    "poll-new": new Howl({
-                        src: ['/@sets/misc/poll-new.wav'],
-                        volume: 1,
-                        preload: true
-                    }),
-                    "poll-update": new Howl({
-                        src: ['/@sets/misc/poll-update.wav'],
-                        volume: .75,
-                        preload: true
-                    }),
-                    "poll-selected": new Howl({
-                        src: ['/@sets/misc/poll-selected.wav'],
-                        volume: .75,
-                        preload: true
-                    }),
-                    "poll-random": []
-                };
-                for (let i = 0; i < pollRandomsLength; i++) {
-                    sfxs['poll-random'][i] = new Howl({
-                        src: [`/@sets/misc/poll-random_pick${i + 1}.wav`],
-                        volume: .75,
-                        preload: true
-                    });
-                }
-
-
                 console.log('Connected to TwitchEvents IO service. Session ID:', socket.id);
                 // Get client information -- aka stuff for first init
                 socket.emit('get-client');
@@ -135,10 +90,7 @@
                         }
 
                         // Stuff for if new poll or notnot
-                        if (d.newPoll) {
-                            playSfx('poll-new');
-                            setPollTimer();
-                        } else if (!d.reInit) playSfx('poll-update');
+                        if (d.newPoll) setPollTimer();
                         if (d.reInit) setPollTimer();
 
 
@@ -178,9 +130,6 @@
 
                         let i = 0;
                         pickingInt = setInterval(() => {
-                            // Sfx
-                            playSfx('poll-random');
-
                             // HTML/CSS animation
                             if (i > tiedEventDivs.length - 1) i = 0;
                             const possibleDiv = pollEvents.querySelector('[possible]');
@@ -218,9 +167,6 @@
                                 if (element.getAttribute('event-name') !== d.winningOption.data.name) element.setAttribute('disable', null);
                                 else element.setAttribute('selected', null);
                             }
-
-                            // Play sfx
-                            playSfx('poll-selected');
 
                             // Clear poll after a few
                             setTimeout(() => { clearPoll(); }, 2000);

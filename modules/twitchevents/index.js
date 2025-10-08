@@ -24,6 +24,40 @@ readline.emitKeypressEvents(process.stdin);
 if (process.stdin.isTTY) process.stdin.setRawMode(true);
 
 
+// Sound effects
+const sfxs = {
+    pollNew: new Player('system', `${__dirname}/misc/poll-new.wav`), 
+    pollUpdate: new Player('system', `${__dirname}/misc/poll-update.wav`),
+    pollSelected: new Player('system', `${__dirname}/misc/poll-selected.wav`),
+    pollRandom: [],
+
+    eventNew: new Player('system', `${__dirname}/misc/event-new.wav`),
+    eventEnded: new Player('system', `${__dirname}/misc/event-ended.wav`),
+}
+const pollRandomsLength = 8;
+for (let i = 0; i < pollRandomsLength; i++) sfxs.pollRandom[i] = new Player('system', `${__dirname}/misc/poll-random_pick${i + 1}.wav`);
+
+let currentRandom = 1;
+/**
+ * Play sound effect from the sfxs object
+ * @param {string} type 
+ * @returns {void}
+ */
+function playSfx(type) {
+    // Random pick
+    if (type == "pollRandom") {
+        if (currentRandom > pollRandomsLength) currentRandom = 1;
+        const calc = pollRandomsLength - currentRandom;
+        sfxs[type][calc].play();
+        currentRandom++;
+        return;
+    }
+    // Default
+    if (sfxs[type]) sfxs[type].play();
+    else console.error(`couldn't find the sfx type under "${type}"`);
+}
+
+
 /**
  * @typedef {{
  *      newOnInit: boolean | null,
@@ -481,6 +515,7 @@ class Client {
         this.poll.current.options = pollList;
         this.poll.current.totalVotes = 0;
         this.poll.current.displayType = "VOTES";
+        playSfx('pollNew');
         this.web.sendEmit(`poll-new`, this.poll.current);
         logger.info(`TwitchEvents: Started a new poll! Closes in ${this.poll.current.time} minute${(this.poll.current.time === 1) ? "" : "s"}!`);
 
@@ -537,7 +572,10 @@ class Client {
         /**
          * @param {Client} client 
          */
-        function sendUpdate(client) { client.web.sendEmit(`poll-update`, client.poll.current) };
+        function sendUpdate(client) {
+            playSfx('pollUpdate');
+            client.web.sendEmit(`poll-update`, client.poll.current)
+        };
     }
 
     /**
@@ -573,7 +611,10 @@ class Client {
                 logger.info('TwitchEvents: Picking one of the winning events...');
                 this.web.sendEmit(`poll-picking`, this.poll.current);
                 
+                let pickingInt = setInterval(() => playSfx('pollRandom'), 200);
+
                 setTimeout(async () => {
+                    clearInterval(pickingInt);
                     this.poll.current.winningOption = this.poll.current.winningOption[Math.floor(Math.random() * this.poll.current.winningOption.length)];
                     end(this);
                 }, pollPickRandomTime);
@@ -585,6 +626,7 @@ class Client {
              */
             function end(client) {
                 if (!client.poll.current || !client.poll.current.winningOption) return;
+                playSfx('pollSelected');
                 // Send emits
                 client.web.sendEmit(`poll-end`, client.poll.current);
 
@@ -695,11 +737,13 @@ class Client {
                         // Normal--just log we're enabling
                         } else logger.info(`TwitchEvents: Enabled "${eventName}"!`);
 
+                        playSfx('eventNew');
                         event.enable(client);
                     },
                     disable(client) {
                         if (!client) throw new Error(noClientErr);
 
+                        playSfx('eventEnded');
                         event.disable(client);
                         logger.info(`TwitchEvents: Disabled "${eventName}"!`);
                     }

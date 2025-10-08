@@ -113,7 +113,7 @@ body {
     transition: all var(--fadeIn-animation);
 }
 
-#poll-container #poll .events .event[selected].percent-bar {
+#poll-container #poll .events .event[selected] .percent-bar {
     background: gold;
 }
 

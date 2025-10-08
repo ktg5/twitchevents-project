@@ -119,12 +119,20 @@ module.exports = {
                     pressKey(TwitchEvents.inputs.getKeyCodeByString(args[0]), ifH);
                 break;
 
+                case 'escape':
+                case 'esc':
+                    pressKey(TwitchEvents.inputs.Keys.Escape);
+                break;
+
                 case 'space':
                 case 'jump':
                     pressKey(TwitchEvents.inputs.Keys.Space, ifH);
                 break;
 
                 // Keys to only be held
+                case 'tab':
+                    toggleKey(TwitchEvents.inputs.Keys.Tab);
+                break;
                 case 'shift':
                     toggleKey(TwitchEvents.inputs.Keys.LeftShift);
                 break;

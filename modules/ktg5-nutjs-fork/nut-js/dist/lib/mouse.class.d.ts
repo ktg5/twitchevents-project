@@ -40,7 +40,7 @@ export declare class MouseClass {
      * @param relative If the mouse movement should be a relative movement
      * @param movementType Defines the type of mouse movement. Would allow to configured acceleration etc. (Default: {@link linear}, no acceleration)
      */
-    move(path: Point[] | Promise<Point[]>, relative: boolean, movementType?: EasingFunction): Promise<MouseClass>;
+    move(path: Point[] | Promise<Point[]>, relative?: boolean, movementType?: EasingFunction): Promise<MouseClass>;
     /**
      * {@link leftClick} performs a click with the left mouse button
      */
