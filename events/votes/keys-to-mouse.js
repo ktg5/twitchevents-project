@@ -3,10 +3,18 @@ const TwitchEvents = require(`../../modules/twitchevents`);
 
 const mouseMoveSpeed = 50;
 const mouseMoveAmount = 30;
+/**
+ * @typedef {Object} KeyAction
+ * @prop {string} type The type of action this key should do. `btn` for mouse buttons, `pos` for mouse movement
+ * @prop {number | TwitchEvents.Point} value The value this action should use for specific type. `btn` uses numbers, `pos` uses `TwitchEvents.Point`s
+ */
+/**
+ * @type {KeyAction[]}
+ */
 const keyActions = {
     "U": {
-        type: 'btn', // "btn" for mouse buttons, "pos" for mouse movement
-        value: 0 // Depdns on type
+        type: 'btn',
+        value: 0
     },
     "I": {
         type: 'pos',
@@ -30,6 +38,11 @@ const keyActions = {
     },
 };
 const activeKeyInts = {};
+function isAction(action) {
+    return action
+    && action.type !== undefined
+    && action.value !== undefined;
+}
 
 const nonoSfx = new TwitchEvents.Player('system', `${__dirname}../../../assets/sfx/nono.wav`);
 
@@ -45,11 +58,7 @@ module.exports = {
         // Main functions for event
         keyHeld(d) {
             const action = keyActions[d[0]];
-            if (
-                action
-                && action.type
-                && action.value
-            ) {
+            if (isAction(action)) {
                 switch (action.type) {
                     case 'btn':
                         // Just hold the mouse button
@@ -70,11 +79,7 @@ module.exports = {
 
         keyRelease(d) {
             const action = keyActions[d[0]];
-            if (
-                action
-                && action.type
-                && action.value
-            ) {
+            if (isAction(action)) {
                 switch (action.type) {
                     case 'btn':
                         // Releaseeeeeee
@@ -95,8 +100,9 @@ module.exports = {
 
         // Release any mouse keys pressed by user
         pressedMouseFunc(d) {
+            console.log(d.synthetic);
             if (d.synthetic) return;
-            TwitchEvents.inputs.releaseMouse(Number(d[0]));
+            TwitchEvents.inputs.releaseMouse(keyActions[d[0]].value);
         },
 
         // If the mouse moved, try to do something do make the user not move
@@ -111,7 +117,7 @@ module.exports = {
     async enable(client) {
         TwitchEvents.inputs.on('keyPressed', this.func.keyHeld);
         TwitchEvents.inputs.on('keyReleased', this.func.keyRelease);
-        TwitchEvents.inputs.on('mousePressed', this.func.pressedMouseFunc);
+        // TwitchEvents.inputs.on('mousePressed', this.func.pressedMouseFunc);
         TwitchEvents.inputs.on('mouseMoved', this.func.movedMouseFunc);
     },
 

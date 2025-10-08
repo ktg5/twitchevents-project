@@ -63,7 +63,7 @@ module.exports = {
             console.log(d);
             if (
                 d[0] == '1'
-                || d[0] == '2'
+                // || d[0] == '2'
             ) {
                 isLmbDown = true;
                 setTimeout(() => {
@@ -75,7 +75,7 @@ module.exports = {
             if (
                 (
                     d[0] == '1'
-                    || d[0] == '2'
+                    // || d[0] == '2'
                 )
                 && isLmbDown
             ) {
