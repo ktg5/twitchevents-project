@@ -116,7 +116,10 @@
                             for (let i = 0; i < lines.length; i++) {   
                                 // If the current line we're at is longer than the length
                                 // defined in the boardLayout at the same pos
-                                if (lines[i].length > boardLayout[i]) {
+                                if (
+                                    lines[i].length > boardLayout[i]
+                                    || lines[i].length > boardLayout[0]
+                                ) {
                                     linesShorter = false;
 
                                     // Split row by each space
@@ -134,7 +137,6 @@
                                     else lines[i + 1] = `${lastWord} ${lines[i + 1]}`;
                                     // Remove lastWord from current row
                                     lines[i] = lines[i].substring(0, lines[i].length - (lastWord.length + 1));
-                                    // lines[i] = lines[i].replace(` ${lastWord}`, '');
                                 }
                             }
 
@@ -175,9 +177,9 @@
                                 if (charac === ' ') continue;
 
                                 // Set column value using the current j & longestLine.count
-                                let colCalc = j + Math.round(((boardLayout[i] - longestLine.count) / 2) - .1);
-                                if (colCalc < 0) colCalc = 0;
+                                let colCalc = j + Math.round(((boardLayout[i] - longestLine.count) / 2));
                                 const characDiv = getCharacDiv(i, colCalc);
+                                // console.log(characDiv);
                                 // Check if charac is a specific character
                                 let isSpecial = false;
                                 specialCharacs.forEach((special) => {
@@ -219,6 +221,11 @@
 
                     }, animationTime);
                 }
+
+
+                // Test phrases for lines
+                // setPhrase({ phrase: `don't stop running little reddit` });
+                // setPhrase({ phrase: `gaming dot com gaming` });
 
 
                 // Listenereseres
