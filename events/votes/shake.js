@@ -60,7 +60,8 @@ module.exports = {
 
     async enable(client) {
         this.func.onPressed = (d) => {
-            console.log(d);
+            // Debug
+            // console.log(d);
             if (
                 d[0] == '1'
                 // || d[0] == '2'
