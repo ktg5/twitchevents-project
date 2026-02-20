@@ -1,3 +1,6 @@
 [submodule "modules/nutjs-fork"]
 	path = modules/nutjs-fork
 	url = https://github.com/ktg5/nutjs-fork.git
+[submodule "modules/adsmanager"]
+	path = modules/adsmanager
+	url = https://github.com/ktg5/adsmanager.git
