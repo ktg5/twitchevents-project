@@ -1,4 +1,4 @@
-const nut = require("../ktg5-nutjs-fork/nut-js");
+const nut = require("../nutjs-fork/nut-js");
 const gkm = require("gkm");
 const keysEnum = require('./keyEnum');
 

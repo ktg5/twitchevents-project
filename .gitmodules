@@ -1,0 +1,3 @@
+[submodule "modules/nutjs-fork"]
+	path = modules/nutjs-fork
+	url = https://github.com/ktg5/nutjs-fork.git
